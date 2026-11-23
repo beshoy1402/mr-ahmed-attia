@@ -336,6 +336,7 @@ document.getElementById("signoutButton").addEventListener("click", async () => {
 onAuthStateChanged(auth, async user => {
   if (user) {
     const token = await user.getIdTokenResult(true);
+    await call("recordAuthenticatedLogin")({ userAgent: navigator.userAgent });
     if (token.claims.role === "developer" && token.claims.accountStatus === "active") {
       window.location.replace("/developer.html");
       return;
