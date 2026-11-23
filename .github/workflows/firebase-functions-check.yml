@@ -9,12 +9,17 @@ on:
       - "firestore.indexes.json"
       - "api/**"
       - "portal.js"
+      - "dashboard-redesign.css"
+      - ".github/workflows/**"
   pull_request:
     branches: [production-foundation]
     paths:
       - "functions/**"
       - "firebase.json"
       - "firestore.indexes.json"
+      - "api/**"
+      - "portal.js"
+      - ".github/workflows/**"
 
 jobs:
   check:
