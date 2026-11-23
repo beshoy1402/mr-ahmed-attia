@@ -256,5 +256,8 @@ exports.reviewAccessRequest = onCall(async (request) => {
   return { status: finalStatus };
 });
 
+// Teacher workspace operations enforce active role and record ownership server-side.
+Object.assign(exports, require("./teacher-core.cjs"));
+
 // Secure Developer-only callable functions. Firestore client rules remain deny-all.
 Object.assign(exports, require("./developer-core.cjs"));
