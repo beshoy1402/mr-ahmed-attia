@@ -4,6 +4,6 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: { input: { main: resolve(process.cwd(), "index.html"), portal: resolve(process.cwd(), "portal.html"), developer: resolve(process.cwd(), "developer.html") } }
+    rollupOptions: { input: { main: resolve(process.cwd(), "index.html"), portal: resolve(process.cwd(), "portal.html"), developer: resolve(process.cwd(), "developer.html"), adminAccounts: resolve(process.cwd(), "admin-accounts.html") } }
   }
 });
