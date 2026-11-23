@@ -19,6 +19,8 @@ const requestForm = document.getElementById("requestAccessForm");
 const requestButton = document.getElementById("requestAccessButton");
 const teacherPanel = document.getElementById("teacherPanel");
 const featureRequestForm = document.getElementById("featureRequestForm");
+const bugReportForm = document.getElementById("bugReportForm");
+const bugReportButton = document.getElementById("bugReportButton");
 const featureRequestButton = document.getElementById("featureRequestButton");
 const pendingList = document.getElementById("pendingList");
 const roleDashboard = document.getElementById("roleDashboard");
@@ -167,12 +169,13 @@ async function refreshAccount(user) {
   requestForm.hidden = true;
   teacherPanel.hidden = true;
   featureRequestForm.hidden = true;
+  bugReportForm.hidden = true;
   roleDashboard.hidden = true;
   try {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
     accountStatus.textContent = statusLabel(data.status) + (data.platformControls?.maintenance ? "\n\n" + (data.platformControls.maintenanceMessage || "The platform is undergoing scheduled maintenance.") : "");
-    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; }
+    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; bugReportForm.hidden = data.role === "developer"; }
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
       teacherPanel.hidden = false;
@@ -269,6 +272,25 @@ document.getElementById("resetButton").addEventListener("click", async () => {
   }
 });
 
+bugReportForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser) return;
+  bugReportButton.disabled = true;
+  try {
+    await call("submitDeveloperBugReport")({
+      title: document.getElementById("bugTitle").value.trim(),
+      details: document.getElementById("bugDetails").value.trim(),
+      severity: document.getElementById("bugSeverity").value
+    });
+    showMessage("Your bug report was submitted.", "success");
+    bugReportForm.reset();
+  } catch (error) {
+    showMessage(error.message || "Could not submit the bug report.");
+  } finally {
+    bugReportButton.disabled = false;
+  }
+});
+
 featureRequestForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!currentUser) return;
@@ -330,6 +352,7 @@ onAuthStateChanged(auth, async user => {
     requestForm.hidden = true;
     teacherPanel.hidden = true;
     featureRequestForm.hidden = true;
+    bugReportForm.hidden = true;
   }
 });
 
