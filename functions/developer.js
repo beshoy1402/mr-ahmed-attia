@@ -79,7 +79,7 @@ function requireDeveloper(request) {
 function clean(value, max = 120) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
-async function assertFeatureEnabled(featureId, role, clientId = null) {
+async function assertFeatureEnabled(featureId, role, clientId = null, userUid = null) {
   featureById(featureId);
   const [snap, globalSnap] = await Promise.all([db.doc("developerFeatureSettings/" + featureId).get(), db.doc("developerSettings/global").get()]);
   const config = snap.exists ? snap.data() : {};
@@ -97,7 +97,9 @@ async function assertFeatureEnabled(featureId, role, clientId = null) {
   if (client && (client.enabled === false || client.visibility === "hidden" || client.visibility === "unavailable" || client.roleAccess?.[role] === false)) {
     throw new HttpsError("unavailable", "This capability is not enabled for this client.");
   }
-  if (config.testMode && role !== "developer" && !(config.betaUserUids || []).includes(arguments[0]?.uid)) {\n    throw new HttpsError("permission-denied", "This feature is currently available only to selected beta testers.");\n  }\n  const schedule = config.schedule || {};
+  if (config.testMode && role !== "developer" && !(config.betaUserUids || []).includes(userUid)) {
+    throw new HttpsError("permission-denied", "This feature is currently available only to selected beta testers.");
+  }\n  const schedule = config.schedule || {};
   const now = Date.now();
   if (schedule.startsAt && now < Date.parse(schedule.startsAt)) throw new HttpsError("unavailable", "This capability is not active yet.");
   if (schedule.endsAt && now >= Date.parse(schedule.endsAt)) throw new HttpsError("unavailable", "This capability's scheduled access has ended.");
@@ -286,7 +288,7 @@ exports.copyDeveloperClientConfig = onCall(async (request) => {
 
 exports.submitDeveloperFeatureRequest = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
-  await assertFeatureEnabled("client.requests", request.auth.token.role || "student", clean(request.data?.clientId, 80) || null);
+  await assertFeatureEnabled("client.requests", request.auth.token.role || "student", clean(request.data?.clientId, 80) || null, request.auth.uid);
   const globalSnap = await db.doc("developerSettings/global").get();
   if (globalSnap.exists && (globalSnap.get("readOnly") || globalSnap.get("emergencyMode"))) throw new HttpsError("failed-precondition", "Feature requests are paused by global safety controls.");
   const title = clean(request.data?.title, 100);
@@ -344,8 +346,8 @@ exports.createManagedAccount = onCall(async (request) => {
   if (!(actorRole === "developer" ? allowedForDeveloper : allowedForAdmin).includes(role)) {
     throw new HttpsError("permission-denied", "Your role cannot create this account type.");
   }
-  await assertFeatureEnabled("security.admin-accounts", actorRole);
-  if (role === "superAdmin") await assertFeatureEnabled("security.create-admin", actorRole);
+  await assertFeatureEnabled("security.admin-accounts", actorRole, null, actor.uid);
+  if (role === "superAdmin") await assertFeatureEnabled("security.create-admin", actorRole, null, actor.uid);
   const email = clean(request.data?.email, 254).toLowerCase();
   const displayName = clean(request.data?.displayName, 100);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || displayName.length < 2) {
