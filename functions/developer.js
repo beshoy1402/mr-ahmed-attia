@@ -97,7 +97,7 @@ async function assertFeatureEnabled(featureId, role, clientId = null) {
   if (client && (client.enabled === false || client.visibility === "hidden" || client.visibility === "unavailable" || client.roleAccess?.[role] === false)) {
     throw new HttpsError("unavailable", "This capability is not enabled for this client.");
   }
-  const schedule = config.schedule || {};
+  if (config.testMode && role !== "developer" && !(config.betaUserUids || []).includes(arguments[0]?.uid)) {\n    throw new HttpsError("permission-denied", "This feature is currently available only to selected beta testers.");\n  }\n  const schedule = config.schedule || {};
   const now = Date.now();
   if (schedule.startsAt && now < Date.parse(schedule.startsAt)) throw new HttpsError("unavailable", "This capability is not active yet.");
   if (schedule.endsAt && now >= Date.parse(schedule.endsAt)) throw new HttpsError("unavailable", "This capability's scheduled access has ended.");
@@ -174,6 +174,8 @@ exports.updateDeveloperFeature = onCall(async (request) => {
     };
     config.clientOverrides = overrides;
   }
+  if (typeof input.testMode === "boolean") config.testMode = input.testMode;
+  if (Array.isArray(input.betaUserUids)) config.betaUserUids = [...new Set(input.betaUserUids.map((uid) => clean(uid, 128)).filter(Boolean))].slice(0, 100);
   if (input.schedule && typeof input.schedule === "object") {
     const startsAt = input.schedule.startsAt ? new Date(input.schedule.startsAt) : null;
     const endsAt = input.schedule.endsAt ? new Date(input.schedule.endsAt) : null;
