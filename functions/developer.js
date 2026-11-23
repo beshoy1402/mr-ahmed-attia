@@ -117,12 +117,14 @@ async function audit(actor, type, target, metadata = {}) {
 
 exports.getDeveloperConsole = onCall(async (request) => {
   const actor = requireDeveloper(request);
-  const [featureSnap, templateSnap, settingsSnap, requestSnap, auditSnap] = await Promise.all([
+  const [featureSnap, templateSnap, settingsSnap, requestSnap, auditSnap, taskSnap, bugSnap] = await Promise.all([
     db.collection("developerFeatureSettings").get(),
     db.collection("developerFeatureTemplates").orderBy("updatedAt", "desc").limit(30).get(),
     db.doc("developerSettings/global").get(),
     db.collection("developerFeatureRequests").orderBy("createdAt", "desc").limit(30).get(),
-    db.collection("auditEvents").orderBy("createdAt", "desc").limit(30).get()
+    db.collection("auditEvents").orderBy("createdAt", "desc").limit(30).get(),
+    db.collection("developerTasks").orderBy("createdAt", "desc").limit(50).get(),
+    db.collection("developerBugReports").orderBy("createdAt", "desc").limit(50).get()
   ]);
   const configs = Object.fromEntries(featureSnap.docs.map((doc) => [doc.id, doc.data()]));
   return {
@@ -131,7 +133,9 @@ exports.getDeveloperConsole = onCall(async (request) => {
     templates: templateSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
     settings: settingsSnap.exists ? settingsSnap.data() : {},
     requests: requestSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
-    audit: auditSnap.docs.filter((doc) => doc.data().actorRole === "developer").map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
+    audit: auditSnap.docs.filter((doc) => doc.data().actorRole === "developer" || doc.data().actorRole === "superAdmin").map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
+    tasks: taskSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null, updatedAt: doc.data().updatedAt?.toDate?.().toISOString?.() || null })),
+    bugs: bugSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
     integrations: {
       firebase: { status: "connected", detail: "Callable backend authenticated" },
       firestoreMetrics: { status: "not-configured", detail: "Enable Cloud Monitoring metrics and grant a read-only metrics integration to display live usage." },
@@ -410,6 +414,66 @@ exports.setManagedAccountStatus = onCall(async (request) => {
   }, { merge: true });
   await audit(actor, disabled ? "managed_account_deactivated" : "managed_account_reactivated", uid, { email: target.email || null, role: claims.role || null });
   return { success: true, disabled };
+});
+
+exports.submitDeveloperBugReport = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  await assertFeatureEnabled("dev.bug-reports", request.auth.token.role || "student");
+  const title = clean(request.data?.title, 120);
+  const details = clean(request.data?.details, 2000);
+  const severity = ["low", "medium", "high", "critical"].includes(request.data?.severity) ? request.data.severity : "medium";
+  if (title.length < 3 || details.length < 5) throw new HttpsError("invalid-argument", "A title and a useful description are required.");
+  const ref = await db.collection("developerBugReports").add({
+    title, details, severity, status: "open",
+    reporterUid: request.auth.uid, reporterEmail: request.auth.token.email || null,
+    reporterRole: request.auth.token.role || null,
+    createdAt: FieldValue.serverTimestamp()
+  });
+  return { id: ref.id, status: "open" };
+});
+
+exports.createDeveloperTask = onCall(async (request) => {
+  const actor = requireDeveloper(request);
+  const title = clean(request.data?.title, 120);
+  const description = clean(request.data?.description, 2000);
+  const assignee = clean(request.data?.assignee, 128);
+  if (title.length < 3) throw new HttpsError("invalid-argument", "Task title is required.");
+  const ref = await db.collection("developerTasks").add({
+    title, description, assignee: assignee || null, status: "todo",
+    createdBy: actor.uid, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+  });
+  await audit(actor, "developer_task_created", ref.id, { title, assignee: assignee || null });
+  return { id: ref.id };
+});
+
+exports.updateDeveloperTask = onCall(async (request) => {
+  const actor = requireDeveloper(request);
+  const id = clean(request.data?.taskId, 128);
+  const status = request.data?.status;
+  if (!id || !["todo", "in_progress", "blocked", "done"].includes(status)) {
+    throw new HttpsError("invalid-argument", "Choose a valid task and status.");
+  }
+  const ref = db.doc("developerTasks/" + id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Task not found.");
+  await ref.update({ status, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() });
+  await audit(actor, "developer_task_status_updated", id, { status });
+  return { success: true };
+});
+
+exports.updateDeveloperBugReport = onCall(async (request) => {
+  const actor = requireDeveloper(request);
+  const id = clean(request.data?.bugId, 128);
+  const status = request.data?.status;
+  if (!id || !["open", "triaged", "in_progress", "resolved", "closed"].includes(status)) {
+    throw new HttpsError("invalid-argument", "Choose a valid bug report and status.");
+  }
+  const ref = db.doc("developerBugReports/" + id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Bug report not found.");
+  await ref.update({ status, reviewedBy: actor.uid, reviewedAt: FieldValue.serverTimestamp() });
+  await audit(actor, "developer_bug_status_updated", id, { status });
+  return { success: true };
 });
 
 exports.getDeveloperUserStatistics = onCall(async (request) => {
