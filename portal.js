@@ -18,7 +18,7 @@ const accountStatus = document.getElementById("accountStatus");
 const requestForm = document.getElementById("requestAccessForm");
 const requestButton = document.getElementById("requestAccessButton");
 const teacherPanel = document.getElementById("teacherPanel");
-const pendingList = document.getElementById("pendingList");
+const pendingList = document.getElementById("pendingList");\nconst roleDashboard = document.getElementById("roleDashboard");\nconst dashboardTitle = document.getElementById("dashboardTitle");\nconst dashboardDescription = document.getElementById("dashboardDescription");\nconst dashboardModules = document.getElementById("dashboardModules");
 let lang = "en";
 let currentUser = null;
 
@@ -102,15 +102,59 @@ function makeButton(label, className, onClick) {
   return button;
 }
 
+const dashboards = {
+  en: {
+    student: { title: "Student Dashboard", description: "Your learning space for lessons, practice and progress.", modules: [["My courses","View enrolled learning programs."],["Lessons & resources","Continue approved lessons and study materials."],["Practice & exams","Work through skill practice and timed tests."],["Assignments","Review tasks and submit completed work."],["Grades & progress","Track released results and learning progress."],["Attendance","Review your recorded attendance."]] },
+    parent: { title: "Parent Dashboard", description: "A family view of linked students and their learning activity.", modules: [["My children","Switch between children linked and approved by the teacher."],["Learning progress","Review each child's learning progress."],["Grades","View released grades for linked children."],["Attendance","Review attendance records."],["Homework","Follow assignments and completion."],["Payments & notices","Review authorized payment summaries and announcements."]] },
+    teacher: { title: "Teacher Dashboard", description: "Teaching workspace for classes, learning content and assessments.", modules: [["Overview","Review teaching activity and class summaries."],["Students & classes","Manage assigned students and groups."],["Courses & lessons","Organize learning programs and lesson content."],["Question bank & exams","Prepare practice questions and assessments."],["Grades","Review and publish authorized results."],["Attendance & homework","Manage class attendance and assignments."]] },
+    assistant: { title: "Assistant Dashboard", description: "A limited workspace for students and groups assigned to you.", modules: [["Assigned students","See only students assigned to your account."],["Attendance follow-up","Support attendance tracking for assigned groups."],["Homework follow-up","Track completion and follow-up tasks."],["Class support","View permitted class schedules and notices."]] },
+    superAdmin: { title: "Administrator Dashboard", description: "System administration and access oversight.", modules: [["User accounts","Review account status and role assignments."],["Access requests","Review pending Student and Parent access requests."],["Staff & permissions","Manage staff access through trusted workflows."],["Reports","View approved system and operational summaries."],["Audit history","Review security and administrative events."],["System settings","Manage approved platform configuration."]] }
+  },
+  ar: {
+    student: { title: "لوحة الطالب", description: "مساحتك التعليمية للدروس والتدريب ومتابعة التقدم.", modules: [["دوراتي","عرض البرامج التعليمية المسجل بها."],["الدروس والمصادر","متابعة الدروس والمواد المعتمدة."],["التدريب والاختبارات","التدريب على المهارات والاختبارات المحددة بوقت."],["الواجبات","مراجعة المهام وتسليم الأعمال."],["الدرجات والتقدم","متابعة النتائج المنشورة والتقدم."],["الحضور","مراجعة سجل الحضور."]] },
+    parent: { title: "لوحة ولي الأمر", description: "متابعة الطلاب المرتبطين بحسابك والمعتمدين من المدرس.", modules: [["أبنائي","التنقل بين الأبناء المرتبطين والمعتمدين فقط."],["التقدم التعليمي","متابعة تقدم كل طالب."],["الدرجات","عرض الدرجات المنشورة للأبناء المرتبطين."],["الحضور","مراجعة سجلات الحضور."],["الواجبات","متابعة الواجبات وحالة الإنجاز."],["المدفوعات والإعلانات","مراجعة الملخصات والإعلانات المصرح بها."]] },
+    teacher: { title: "لوحة المدرس", description: "مساحة لإدارة الفصول والمحتوى والتقييمات.", modules: [["نظرة عامة","متابعة نشاط التدريس وملخصات الفصول."],["الطلاب والفصول","إدارة الطلاب والمجموعات المسندة."],["الدورات والدروس","تنظيم البرامج والمحتوى التعليمي."],["بنك الأسئلة والاختبارات","إعداد الأسئلة والتقييمات التدريبية."],["الدرجات","مراجعة النتائج المصرح بها ونشرها."],["الحضور والواجبات","إدارة الحضور والمهام."]] },
+    assistant: { title: "لوحة المساعد", description: "مساحة محدودة للطلاب والمجموعات المسندة إليك.", modules: [["الطلاب المسندون","عرض الطلاب المسندين إلى حسابك فقط."],["متابعة الحضور","دعم تسجيل الحضور للمجموعات المسندة."],["متابعة الواجبات","متابعة الإنجاز والمهام."],["دعم الفصول","عرض الجداول والإعلانات المصرح بها."]] },
+    superAdmin: { title: "لوحة المسؤول", description: "إدارة النظام ومراجعة صلاحيات الوصول.", modules: [["حسابات المستخدمين","مراجعة حالة الحسابات وتعيين الأدوار."],["طلبات الوصول","مراجعة طلبات الطلاب وأولياء الأمور."],["الفريق والصلاحيات","إدارة صلاحيات الفريق عبر إجراءات موثوقة."],["التقارير","عرض الملخصات المصرح بها."],["سجل التدقيق","مراجعة الأحداث الأمنية والإدارية."],["إعدادات النظام","إدارة إعدادات المنصة المعتمدة."]] }
+  }
+};
+
+function renderDashboard(role) {
+  const config = dashboards[lang][role];
+  if (!config) {
+    roleDashboard.hidden = true;
+    return;
+  }
+  dashboardTitle.textContent = config.title;
+  dashboardDescription.textContent = config.description;
+  dashboardModules.replaceChildren();
+  for (const [title, description] of config.modules) {
+    const tile = document.createElement("article");
+    tile.className = "dashboard-tile";
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    const detail = document.createElement("span");
+    detail.textContent = description;
+    const lock = document.createElement("div");
+    lock.className = "dashboard-lock";
+    lock.textContent = lang === "ar" ? "قيد التجهيز" : "SETUP PENDING";
+    tile.append(heading, detail, lock);
+    dashboardModules.append(tile);
+  }
+  roleDashboard.hidden = false;
+}
+
 async function refreshAccount(user) {
   currentUser = user;
   accountStatus.textContent = copy[lang].loading;
   requestForm.hidden = true;
   teacherPanel.hidden = true;
+  roleDashboard.hidden = true;
   try {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
     accountStatus.textContent = statusLabel(data.status);
+    if (data.status === "active" && data.role) renderDashboard(data.role);
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
       teacherPanel.hidden = false;
