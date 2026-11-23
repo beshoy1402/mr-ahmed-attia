@@ -1,9 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+import { createCallable } from "./api-client.js";
 import { firebaseConfig } from "/firebase-config.js";
-const app=initializeApp(firebaseConfig),auth=getAuth(app),functions=getFunctions(app,"us-central1");
-const call=name=>httpsCallable(functions,name),$=id=>document.getElementById(id);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),call=createCallable(auth),$=id=>document.getElementById(id);
 let data=null,page="overview",clientId="";
 const roles={student:"Student",parent:"Parent",teacher:"Teacher",assistant:"Assistant",superAdmin:"Administrator",developer:"Developer"};
 const titles={overview:"Developer Overview",features:"Feature Management Center",clients:"Client Configurations",accounts:"Account Management",requests:"Feature Requests",system:"Global Controls",monitoring:"System Monitoring",security:"Audit & Security",recovery:"Backup & Recovery",development:"Development & Release"};
