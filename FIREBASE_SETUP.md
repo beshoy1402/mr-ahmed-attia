@@ -18,7 +18,7 @@ In the Firebase Console:
 ## 2. Register the web application
 
 1. In Project settings, register a Web App for this LMS.
-2. Copy the web app configuration values into the hosting provider's environment-variable settings.
+2. The supplied web app configuration is stored in the root-level `firebase-config.js` file for this static site. It contains public client identifiers only; do not add admin credentials or private keys.
 3. The Firebase web config is public app identification, not an admin credential. Security must come from Authentication, Firestore/Storage rules, App Check, and trusted server authorization.
 4. Never commit real environment files or service-account keys.
 
@@ -26,7 +26,9 @@ Required public web values are listed in `.env.example`. The project ID is prefi
 
 ## 3. Enable only the services needed for the first milestone
 
-- Authentication: enable the sign-in methods only after the account and verification flows are designed.
+- Authentication: enable **Email/Password** in Firebase Console → Authentication → Sign-in method. The current portal supports email/password sign-in and password-reset email; self-registration is intentionally disabled.
+- Authentication → Settings → Authorized domains: ensure the deployed Vercel hostname is listed. Add the production hostname and the preview hostname if you will test sign-in on previews.
+- Confirm the email/password sign-in flow with a teacher-created test account before inviting students.
 - Firestore: create the database in the approved region.
 - Storage: enable only when secure file uploads are ready.
 - App Check: configure for supported production clients.
