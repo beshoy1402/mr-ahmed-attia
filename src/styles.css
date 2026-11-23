@@ -128,3 +128,25 @@ body{background:radial-gradient(ellipse at 78% 4%,#e9e5ff 0%,transparent 34%),ra
 }
 @media(max-width:390px){.hero-art{transform:scale(.86);transform-origin:top center;height:360px;margin-bottom:-25px}.hero-art:before{width:215px;height:215px;right:35px}}
 @media(prefers-reduced-motion:reduce){.art-main,.hero-art:before,.hero-art:after{animation:none!important}}
+
+/* Multi-exam English preparation + richer light dimensional motion */
+.exam-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;perspective:1200px;margin-top:38px}
+.exam-card{position:relative;min-height:330px;padding:25px 22px 20px;border:1px solid #ffffffd9;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transform-style:preserve-3d;box-shadow:0 18px 45px #52547d12,inset 0 1px #fff;transition:box-shadow .35s,border-color .35s}
+.exam-card:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-80px;top:55px;background:#ffffff70;filter:blur(2px);pointer-events:none}
+.exam-card:after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,#ffffff70,transparent 45%,#ffffff18);pointer-events:none}
+.exam-card:hover{box-shadow:0 30px 60px #52547d24;border-color:#ffffff}
+.exam-violet{background:linear-gradient(145deg,#eee9ff,#dcd5ff 62%,#c8c2f4)}.exam-blue{background:linear-gradient(145deg,#e8f2ff,#d6e6ff 62%,#c4d8f5)}.exam-mint{background:linear-gradient(145deg,#e6f7f2,#d0eee7 62%,#bde2d9)}.exam-peach{background:linear-gradient(145deg,#fff0e7,#f8dfd2 62%,#f1d0c2)}
+.exam-card-top,.exam-card-bottom{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;color:#6c7090;font-size:9px;font-weight:800;letter-spacing:.12em}
+.exam-spark{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:#ffffffa8;color:#7564c9}
+.exam-code{position:relative;z-index:1;margin:36px 0 14px;font-size:clamp(44px,5vw,66px);line-height:.9;font-weight:900;letter-spacing:-.08em;color:#303250;text-shadow:0 7px 18px #41436b18}
+.exam-card h3{position:relative;z-index:1;margin:0 0 10px;font-size:17px;color:#303250;letter-spacing:-.03em}.exam-card p{position:relative;z-index:1;margin:0;color:#626984;font-size:12px;line-height:1.7}
+.exam-card-bottom{margin-top:auto;padding-top:22px;border-top:1px solid #4d507522;color:#737995;font-size:8px}.exam-card-bottom svg{color:#7463c9}
+.program-details{display:flex;align-items:center;justify-content:space-between;gap:30px;margin-top:28px;padding:24px 26px;border:1px solid #e5e6f0;border-radius:18px;background:#ffffffb8;box-shadow:0 12px 32px #44466e08}
+.program-details-copy h3{margin:0 0 7px;color:#292d49;font-size:16px}.program-details-copy p{margin:0 0 7px;color:#626a82;font-size:12px;line-height:1.7}.program-details-copy small{color:#858ba0;font-size:10px;line-height:1.6}.programs-heading{margin-bottom:0}
+.hero-art:before{animation:orb-float 7s ease-in-out infinite,orb-glow 5s ease-in-out infinite}.hero-art:after{animation:orbit-drift 26s linear infinite}.floating-note{animation:note-hover 5s ease-in-out infinite}.note-bottom{animation-delay:-2.5s}.art-label{animation:label-hover 6s ease-in-out infinite}
+@keyframes orb-glow{0%,100%{filter:saturate(1);box-shadow:inset -20px -22px 35px #5d549b35,0 0 45px #a99aef70,0 28px 55px #55518a30}50%{filter:saturate(1.18);box-shadow:inset -20px -22px 35px #5d549b35,0 0 68px #a99aef8c,0 32px 65px #55518a3d}}
+@keyframes note-hover{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-10px) rotate(1deg)}}@keyframes label-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media(max-width:980px){.exam-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.exam-card{min-height:290px}}
+@media(max-width:700px){.exam-grid{gap:11px;margin-top:26px}.exam-card{min-height:270px;padding:18px 15px 16px;border-radius:17px}.exam-code{font-size:48px;margin:30px 0 12px}.exam-card h3{font-size:14px}.exam-card p{font-size:10px}.exam-card-bottom{font-size:7px}.program-details{align-items:flex-start;flex-direction:column;padding:20px}.programs-heading{margin-bottom:0}}
+@media(max-width:390px){.exam-grid{grid-template-columns:1fr}.exam-card{min-height:230px}.exam-code{margin-top:22px}}
+@media(prefers-reduced-motion:reduce){.floating-note,.art-label,.hero-art:before,.hero-art:after{animation:none!important}.exam-card{transition:none!important}}
