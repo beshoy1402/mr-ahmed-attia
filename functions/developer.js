@@ -292,6 +292,49 @@ exports.setDeveloperSystemControls = onCall(async (request) => {
   return { success: true };
 });
 
+exports.createManagedAccount = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  const actor = request.auth;
+  const actorRole = actor.token.role;
+  if (!["developer", "superAdmin"].includes(actorRole) || actor.token.accountStatus !== "active") {
+    throw new HttpsError("permission-denied", "An active Developer or Administrator account is required.");
+  }
+  const role = clean(request.data?.role, 40);
+  const allowedForDeveloper = ["student", "parent", "teacher", "assistant", "superAdmin"];
+  const allowedForAdmin = ["student", "parent", "teacher", "assistant"];
+  if (!(actorRole === "developer" ? allowedForDeveloper : allowedForAdmin).includes(role)) {
+    throw new HttpsError("permission-denied", "Your role cannot create this account type.");
+  }
+  const email = clean(request.data?.email, 254).toLowerCase();
+  const displayName = clean(request.data?.displayName, 100);
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || displayName.length < 2) {
+    throw new HttpsError("invalid-argument", "Enter a valid email and a name with at least two characters.");
+  }
+  let user;
+  try {
+    user = await getAuth().createUser({ email, displayName, disabled: false, emailVerified: false });
+    await getAuth().setCustomUserClaims(user.uid, { role, accountStatus: "active" });
+    const batch = db.batch();
+    const now = FieldValue.serverTimestamp();
+    batch.set(db.doc("userProfiles/" + user.uid), {
+      uid: user.uid, email, displayName, role, status: "active",
+      provisionedBy: actor.uid, createdAt: now, updatedAt: now
+    });
+    batch.set(db.collection("auditEvents").doc(), {
+      type: "managed_account_created", actorUid: actor.uid, actorRole,
+      targetUid: user.uid, targetEmail: email, assignedRole: role, createdAt: now
+    });
+    await batch.commit();
+  } catch (error) {
+    if (user?.uid) await getAuth().deleteUser(user.uid).catch(() => {});
+    if (error.code === "auth/email-already-exists") throw new HttpsError("already-exists", "An account with this email already exists.");
+    throw error;
+  }
+  const passwordResetLink = await getAuth().generatePasswordResetLink(email);
+  await audit(actor, "developer_managed_account_created", user.uid, { email, role });
+  return { uid: user.uid, email, role, passwordResetLink };
+});
+
 exports.getDeveloperUserStatistics = onCall(async (request) => {
   requireDeveloper(request);
   const counts = {};
