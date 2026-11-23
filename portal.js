@@ -135,7 +135,7 @@ const dashboards = {
   ar: {
     student: { title: "لوحة الطالب", description: "مساحتك التعليمية للدروس والتدريب ومتابعة التقدم.", modules: [["دوراتي","عرض البرامج التعليمية المسجل بها."],["الدروس والمصادر","متابعة الدروس والمواد المعتمدة."],["التدريب والاختبارات","التدريب على المهارات والاختبارات المحددة بوقت."],["الواجبات","مراجعة المهام وتسليم الأعمال."],["الدرجات والتقدم","متابعة النتائج المنشورة والتقدم."],["الحضور","مراجعة سجل الحضور."]] },
     parent: { title: "لوحة ولي الأمر", description: "متابعة الطلاب المرتبطين بحسابك والمعتمدين من المدرس.", modules: [["أبنائي","التنقل بين الأبناء المرتبطين والمعتمدين فقط."],["التقدم التعليمي","متابعة تقدم كل طالب."],["الدرجات","عرض الدرجات المنشورة للأبناء المرتبطين."],["الحضور","مراجعة سجلات الحضور."],["الواجبات","متابعة الواجبات وحالة الإنجاز."],["المدفوعات والإعلانات","مراجعة الملخصات والإعلانات المصرح بها."]] },
-    teacher: { title: "لوحة المدرس", description: "مساحة لإدارة الفصول والمحتوى والتقييمات.", modules: [["نظرة عامة","متابعة نشاط التدريس وملخصات الفصول."],["الطلاب والفصول","إدارة الطلاب والمجموعات المسندة."],["الدورات والدروس","تنظيم البرامج والمحتوى التعليمي."],["بنك الأسئلة والاختبارات","إعداد الأسئلة والتقييمات التدريبية."],["الدرجات","مراجعة النتائج المصرح بها ونشرها."],["الحضور والواجبات","إدارة الحضور والمهام."]] },
+    teacher: { title: "لوحة المدرس", description: "مساحة لإدارة الفصول والمحتوى والتقييمات.", modules: [["نظرة عامة","متابعة نشاط التدريس وملخصات الفصول."],["الطلاب والفصول","إدارة الطلاب والمجموعات المسندة."],["الدورات والدروس","تنظيم البرامج والمحتوى التعليمي."],["بنك الأسئلة والاختبارات","إعداد الأسئلة والتقييمات التدريبية."],["الدرجات","مراجعة النتائج المصرح بها ونشرها."],["الحضور والواجبات","إدارة الحضور والمهام."],["التقارير والتحليلات","مراجعة مؤشرات الفصول والدرجات والحضور."]] },
     assistant: { title: "لوحة المساعد", description: "مساحة محدودة للطلاب والمجموعات المسندة إليك.", modules: [["الطلاب المسندون","عرض الطلاب المسندين إلى حسابك فقط."],["متابعة الحضور","دعم تسجيل الحضور للمجموعات المسندة."],["متابعة الواجبات","متابعة الإنجاز والمهام."],["دعم الفصول","عرض الجداول والإعلانات المصرح بها."]] },
     superAdmin: { title: "لوحة المسؤول", description: "إدارة النظام ومراجعة صلاحيات الوصول.", modules: [["حسابات المستخدمين","مراجعة حالة الحسابات وتعيين الأدوار."],["طلبات الوصول","مراجعة طلبات الطلاب وأولياء الأمور."],["الفريق والصلاحيات","إدارة صلاحيات الفريق عبر إجراءات موثوقة."],["التقارير","عرض الملخصات المصرح بها."],["سجل التدقيق","مراجعة الأحداث الأمنية والإدارية."],["إعدادات النظام","إدارة إعدادات المنصة المعتمدة."]] }
   }
@@ -284,6 +284,27 @@ function renderTeacherModule(index) {
     const quick=document.createElement("div");quick.className="teacher-quick-actions";
     [["Add student","students",1,"student"],["Create class","classes",1,"class"],["Create course","courses",2,"course"],["Create exam","exams",3,"exam"],["Record attendance","attendance",5,"attendance"]].forEach(([label,type,module,key])=>quick.append(teacherButton(lang==="ar"?(teacherArabic.quickActions?.[key]||label):label,"teacher-action",()=>{teacherActiveType=type;renderTeacherModule(module);})));
     teacherWorkspacePanel.append(quick,teacherText("p","teacher-hint",teacherTr("Your records are private to your teacher account. Changes are saved securely.","private")));
+    return;
+  }
+  if (index === 6) {
+    const active=teacherRecords.filter(item=>item.status!=="archived");
+    const grades=active.filter(item=>item.type==="grades"&&Number(item.maxScore)>0);
+    const attendance=active.filter(item=>item.type==="attendance");
+    const average=grades.length?Math.round(grades.reduce((sum,item)=>sum+(Number(item.score)/Number(item.maxScore))*100,0)/grades.length):null;
+    const attended=attendance.filter(item=>["present","late"].includes(item.status)).length;
+    const attendanceRate=attendance.length?Math.round(attended/attendance.length*100):null;
+    const metrics=document.createElement("div");metrics.className="teacher-metrics";
+    [["Students",active.filter(x=>x.type==="students").length,"الطلاب"],["Classes",active.filter(x=>x.type==="classes").length,"الفصول"],["Average grade",average===null?"—":average+"%","متوسط الدرجات"],["Attendance rate",attendanceRate===null?"—":attendanceRate+"%","معدل الحضور"],["Homework",active.filter(x=>x.type==="homework").length,"الواجبات"]].forEach(([label,value,ar])=>{
+      const card=teacherText("div","teacher-metric","");card.append(teacherText("small","",lang==="ar"?ar:label),teacherText("strong","",String(value)));metrics.append(card);
+    });
+    teacherWorkspacePanel.append(metrics,teacherText("p","teacher-hint",lang==="ar"?"تعتمد هذه المؤشرات على السجلات الموجودة في مساحة المدرس فقط. لا يتم إنشاء درجات أو بيانات تقديرية.":"These insights use only records saved in your teacher workspace. No grades or activity data are invented."));
+    const exportButton=teacherButton(lang==="ar"?"تصدير تقرير CSV":"Export CSV report","teacher-action primary",()=>{
+      const columns=["type","id","displayName","name","title","studentId","classId","courseId","score","maxScore","status","date","dueAt","updatedAt"];
+      const csv=[columns.join(","),...active.map(item=>columns.map(key=>'"'+String(item[key]??"").replace(/"/g,'""')+'"').join(","))].join("\\r\\n");
+      const blob=new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);
+      const anchor=document.createElement("a");anchor.href=url;anchor.download="teacher-workspace-report.csv";document.body.append(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+    });
+    teacherWorkspacePanel.append(exportButton);
     return;
   }
   const types=teacherSectionTypes[index]||[];
