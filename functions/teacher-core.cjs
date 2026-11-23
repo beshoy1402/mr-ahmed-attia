@@ -46,7 +46,12 @@ function validateFields(type, input) {
     else throw new HttpsError("invalid-argument", "Invalid value for " + key + ".");
   }
   for (const key of schema.required) if (fields[key] === undefined || fields[key] === "") throw new HttpsError("invalid-argument", schema.label + " requires " + key + ".");
+  if (fields.status && type !== "attendance" && !["draft", "active", "published", "archived"].includes(fields.status)) throw new HttpsError("invalid-argument", "Choose a valid record status.");
   if (type === "grades" && (fields.score < 0 || fields.maxScore <= 0 || fields.score > fields.maxScore)) throw new HttpsError("invalid-argument", "Grade score must be between zero and the maximum score.");
+  if (["durationMinutes"].some((key) => fields[key] !== undefined && fields[key] !== null && fields[key] <= 0)) throw new HttpsError("invalid-argument", "Duration must be greater than zero.");
+  for (const key of ["startsAt", "endsAt", "dueAt", "date"]) if (fields[key] && Number.isNaN(Date.parse(fields[key]))) throw new HttpsError("invalid-argument", "Enter a valid date for " + key + ".");
+  if (fields.startsAt && fields.endsAt && Date.parse(fields.endsAt) <= Date.parse(fields.startsAt)) throw new HttpsError("invalid-argument", "End time must be after start time.");
+  for (const key of ["resourceUrl", "meetingUrl"]) if (fields[key]) { let url; try { url = new URL(fields[key]); } catch { throw new HttpsError("invalid-argument", "Enter a valid URL."); } if (!["https:", "http:"].includes(url.protocol)) throw new HttpsError("invalid-argument", "Only HTTP or HTTPS links are allowed."); }
   if (type === "attendance" && !["present", "absent", "late", "excused"].includes(fields.status)) throw new HttpsError("invalid-argument", "Choose a valid attendance status.");
   if (type === "students" && fields.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) throw new HttpsError("invalid-argument", "Enter a valid student email.");
   return fields;
