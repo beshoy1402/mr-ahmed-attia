@@ -306,26 +306,3 @@ exports.getDeveloperUserStatistics = onCall(async (request) => {
   } while (pageToken);
   return { totalAccounts: Object.values(counts).reduce((sum, value) => sum + value, 0), byRole: counts };
 });
-
-exports.assertDeveloperFeatureAvailable = async ({ featureId, role, clientId }) => {
-  featureById(featureId);
-  const [featureSnap, globalSnap] = await Promise.all([
-    db.doc("developerFeatureSettings/" + featureId).get(),
-    db.doc("developerSettings/global").get()
-  ]);
-  const config = featureSnap.exists ? featureSnap.data() : {};
-  const global = globalSnap.exists ? globalSnap.data() : {};
-  if (global.emergencyMode && !["dev.separate-dashboard", "security.developer-only"].includes(featureId)) {
-    throw new HttpsError("unavailable", "The feature is temporarily disabled by emergency controls.");
-  }
-  if (config.enabled === false) throw new HttpsError("unavailable", "This feature is currently unavailable.");
-  if (config.visibility === "hidden") throw new HttpsError("not-found", "This feature is not available.");
-  if (config.roleAccess?.[role] === false) throw new HttpsError("permission-denied", "Your role cannot access this feature.");
-  const override = clientId && config.clientOverrides?.[clientId];
-  if (override?.enabled === false || override?.visibility === "hidden") throw new HttpsError("unavailable", "This feature is not enabled for this client.");
-  const schedule = config.schedule || {};
-  const now = Date.now();
-  if (schedule.startsAt && now < Date.parse(schedule.startsAt)) throw new HttpsError("unavailable", "This feature is not active yet.");
-  if (schedule.endsAt && now >= Date.parse(schedule.endsAt)) throw new HttpsError("unavailable", "This feature's scheduled access has ended.");
-  return true;
-};
