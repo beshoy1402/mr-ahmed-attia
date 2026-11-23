@@ -26,6 +26,17 @@ const roleDashboard = document.getElementById("roleDashboard");
 const dashboardTitle = document.getElementById("dashboardTitle");
 const dashboardDescription = document.getElementById("dashboardDescription");
 const dashboardModules = document.getElementById("dashboardModules");
+const roleNav = document.getElementById("roleNav");
+const roleDetail = document.getElementById("roleDetail");
+const roleDetailTitle = document.getElementById("roleDetailTitle");
+const roleDetailText = document.getElementById("roleDetailText");
+const roleUserEmail = document.getElementById("roleUserEmail");
+const roleLabel = document.getElementById("roleLabel");
+const roleWelcomeTitle = document.getElementById("roleWelcomeTitle");
+const roleWelcomeText = document.getElementById("roleWelcomeText");
+const roleWelcomeKicker = document.getElementById("roleWelcomeKicker");
+const roleModulesHeading = document.getElementById("roleModulesHeading");
+const roleQuicklinks = document.getElementById("roleQuicklinks");
 let lang = "en";
 let currentUser = null;
 
@@ -128,14 +139,53 @@ const dashboards = {
 
 function renderDashboard(role) {
   const config = dashboards[lang][role];
-  if (!config) {
-    roleDashboard.hidden = true;
-    return;
-  }
+  if (!config) { roleDashboard.hidden = true; return; }
+  const roleNames = {
+    en: {student:"STUDENT SPACE",parent:"PARENT SPACE",teacher:"TEACHER WORKSPACE",assistant:"ASSISTANT WORKSPACE",superAdmin:"ADMINISTRATION"},
+    ar: {student:"مساحة الطالب",parent:"مساحة ولي الأمر",teacher:"مساحة المدرس",assistant:"مساحة المساعد",superAdmin:"إدارة المنصة"}
+  };
+  const welcome = {
+    en: {
+      student:["Ready to keep learning?","Your courses, practice and learning updates will be organized here."],
+      parent:["Stay connected to their learning.","A clear place for approved updates about linked children."],
+      teacher:["Your teaching workspace starts here.","Keep your classes, learning resources and assessment tools organized."],
+      assistant:["Your class support workspace.","Find your assigned support areas and follow-up sections here."],
+      superAdmin:["Platform administration, made clearer.","Manage approved account and platform workflows from one organized workspace."]
+    },
+    ar: {
+      student:["مستعد لمواصلة التعلم؟","ستجد هنا تنظيمًا لدوراتك وتدريباتك وتحديثاتك التعليمية."],
+      parent:["تابع رحلتهم التعليمية بسهولة.","مساحة واضحة لمتابعة التحديثات المعتمدة للأبناء المرتبطين بحسابك."],
+      teacher:["مساحة عملك التعليمية تبدأ من هنا.","نظّم الفصول والمصادر التعليمية وأدوات التقييم في مكان واحد."],
+      assistant:["مساحة دعم الفصول الخاصة بك.","اعثر هنا على أقسام المتابعة والدعم المسندة إلى حسابك."],
+      superAdmin:["إدارة المنصة بصورة أكثر وضوحًا.","أدر الحسابات وسير العمل المعتمد من مساحة منظمة."]
+    }
+  };
   dashboardTitle.textContent = config.title;
   dashboardDescription.textContent = config.description;
+  roleLabel.textContent = roleNames[lang][role] || "LEARNING PORTAL";
+  roleUserEmail.textContent = currentUser?.email || auth.currentUser?.email || (lang === "ar" ? "حسابك" : "Your account");
+  roleWelcomeTitle.textContent = welcome[lang][role][0];
+  roleWelcomeText.textContent = welcome[lang][role][1];
+  roleWelcomeKicker.textContent = lang === "ar" ? "مرحبًا بك في مساحة عملك" : "WELCOME TO YOUR WORKSPACE";
+  roleModulesHeading.textContent = lang === "ar" ? "أقسام مساحة العمل" : "Your workspace";
   dashboardModules.replaceChildren();
-  for (const [title, description] of config.modules) {
+  roleNav.replaceChildren();
+  const showModule = (index) => {
+    const item = config.modules[index];
+    if (!item) return;
+    roleNav.querySelectorAll("button").forEach((button,i)=>button.classList.toggle("active",i===index));
+    roleDetailTitle.textContent = item[0];
+    roleDetailText.textContent = lang === "ar"
+      ? "هذا القسم مُجهّز ضمن تصميم لوحة التحكم، لكن وظائفه وبياناته لن تُفتح قبل تنفيذ الصلاحيات الآمنة واختبارها."
+      : "This section is included in the dashboard design. Its tools and data will remain unavailable until the required secure permissions are implemented and tested.";
+    roleDetail.hidden = false;
+  };
+  config.modules.forEach(([title, description], index) => {
+    const navButton = document.createElement("button");
+    navButton.type = "button";
+    navButton.textContent = title;
+    navButton.addEventListener("click",()=>showModule(index));
+    roleNav.append(navButton);
     const tile = document.createElement("article");
     tile.className = "dashboard-tile";
     const heading = document.createElement("strong");
@@ -144,24 +194,20 @@ function renderDashboard(role) {
     detail.textContent = description;
     const lock = document.createElement("div");
     lock.className = "dashboard-lock";
-    lock.textContent = lang === "ar" ? "قيد التجهيز" : "SETUP PENDING";
-    tile.append(heading, detail, lock);
+    lock.textContent = lang === "ar" ? "غير مفعّل بعد" : "NOT ENABLED YET";
+    tile.append(heading,detail,lock);
     dashboardModules.append(tile);
-  }
+  });
+  roleQuicklinks.replaceChildren();
   if (role === "superAdmin") {
-    const tile = document.createElement("a");
-    tile.className = "dashboard-tile";
-    tile.href = "/admin-accounts.html";
-    const heading = document.createElement("strong");
-    heading.textContent = lang === "ar" ? "إدارة الحسابات التعليمية" : "Educational Account Management";
-    const detail = document.createElement("span");
-    detail.textContent = lang === "ar" ? "إنشاء وإدارة حسابات الطلاب وأولياء الأمور والمدرسين والمساعدين." : "Create and manage Student, Parent, Teacher and Assistant accounts.";
-    tile.append(heading, detail);
-    dashboardModules.append(tile);
+    const link = document.createElement("a");
+    link.href = "/admin-accounts.html";
+    link.textContent = lang === "ar" ? "إدارة الحسابات التعليمية" : "Open account management";
+    roleQuicklinks.append(link);
   }
+  showModule(0);
   roleDashboard.hidden = false;
 }
-
 async function refreshAccount(user) {
   currentUser = user;
   accountStatus.textContent = copy[lang].loading;
