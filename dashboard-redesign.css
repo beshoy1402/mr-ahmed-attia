@@ -110,3 +110,39 @@ body:has(.signed.show){display:block;padding:24px;background:var(--dash-paper)}
 #appView .control small{color:#7b889c}
 #appView .side-bottom{border-color:#ffffff1c}
 @media(max-width:720px){#appView.app{display:block}#appView .sidebar{position:relative;height:auto;padding:14px}#appView .nav{display:flex;overflow:auto;padding-top:12px}#appView .nav button{white-space:nowrap}#appView main{padding:20px 13px}}
+
+
+/* Teacher workspace: practical forms, clear lists and mobile-first controls */
+.teacher-workspace-panel{margin-top:18px;display:grid;gap:14px;color:#263650}
+.teacher-workspace-panel[hidden]{display:none!important}
+.teacher-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.teacher-metric{background:#f8faff;border:1px solid #e5eaf3;border-radius:12px;padding:14px;min-width:0}
+.teacher-metric small{display:block;color:#7c899d;font-size:10px;font-weight:700}
+.teacher-metric strong{display:block;color:#1c2e4b;font-size:24px;margin-top:7px}
+.teacher-subheading{font-size:14px;color:#1c2e4b;margin:6px 0}
+.teacher-quick-actions,.teacher-type-tabs{display:flex;flex-wrap:wrap;gap:8px}
+.teacher-action,.teacher-type,.teacher-small{border:1px solid #dfe6f0;background:#fff;color:#354762;border-radius:10px;padding:10px 13px;font:700 11px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.teacher-action.primary{background:#4267d5;border-color:#4267d5;color:#fff}
+.teacher-action:hover,.teacher-small:hover,.teacher-type:hover{border-color:#9eb3e8}
+.teacher-type.active{background:#edf2ff;border-color:#b9c9f2;color:#3157b8}
+.teacher-list-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.teacher-list-toolbar input{max-width:360px;border:1px solid #dfe6f0;border-radius:10px;padding:11px 13px;font:12px inherit}
+.teacher-record-list{display:grid;gap:8px}
+.teacher-record{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #e5eaf2;border-radius:12px;min-width:0}
+.teacher-record>div:first-child{min-width:0}
+.teacher-record strong{display:block;color:#233550;font-size:12px;overflow-wrap:anywhere}
+.teacher-record small{display:block;color:#8490a2;font-size:10px;margin-top:5px;overflow-wrap:anywhere}
+.teacher-record-actions{display:flex;gap:6px;flex:none}
+.teacher-small{padding:8px 10px;font-size:10px}
+.teacher-small.danger{color:#a7444a;background:#fff7f7;border-color:#f0dada}
+.teacher-empty,.teacher-loading,.teacher-error,.teacher-hint{font-size:11px;line-height:1.7;color:#78869b;background:#f8faff;border:1px dashed #dfe6f0;padding:14px;border-radius:11px}
+.teacher-error{color:#a33e47;background:#fff6f6;border-color:#f1dada}
+.teacher-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:#fff;border:1px solid #e5eaf2;border-radius:14px;padding:16px}
+.teacher-form h4{grid-column:1/-1}
+.teacher-field{display:grid;gap:6px;align-content:start;margin:0;color:#596981;font-size:10px;font-weight:750}
+.teacher-field input,.teacher-field select,.teacher-field textarea{width:100%;min-width:0;border:1px solid #dfe6f0;border-radius:9px;padding:11px 12px;background:#fff;color:#263650;font:12px Inter,ui-sans-serif,system-ui,sans-serif}
+.teacher-field textarea{resize:vertical;line-height:1.5}
+.teacher-field input:focus,.teacher-field select:focus,.teacher-field textarea:focus{outline:3px solid #4267d51a;border-color:#7894e3}
+.teacher-form-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;padding-top:4px}
+@media(max-width:900px){.teacher-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.teacher-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-form{grid-template-columns:1fr;padding:12px}.teacher-form h4,.teacher-form-actions{grid-column:auto}.teacher-list-toolbar{align-items:stretch;flex-direction:column}.teacher-list-toolbar input{max-width:none}.teacher-record{align-items:flex-start;flex-direction:column}.teacher-record-actions{width:100%}.teacher-record-actions button{flex:1}.teacher-workspace-panel{gap:11px}}
