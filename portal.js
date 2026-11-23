@@ -18,7 +18,11 @@ const accountStatus = document.getElementById("accountStatus");
 const requestForm = document.getElementById("requestAccessForm");
 const requestButton = document.getElementById("requestAccessButton");
 const teacherPanel = document.getElementById("teacherPanel");
-const pendingList = document.getElementById("pendingList");\nconst roleDashboard = document.getElementById("roleDashboard");\nconst dashboardTitle = document.getElementById("dashboardTitle");\nconst dashboardDescription = document.getElementById("dashboardDescription");\nconst dashboardModules = document.getElementById("dashboardModules");
+const pendingList = document.getElementById("pendingList");
+const roleDashboard = document.getElementById("roleDashboard");
+const dashboardTitle = document.getElementById("dashboardTitle");
+const dashboardDescription = document.getElementById("dashboardDescription");
+const dashboardModules = document.getElementById("dashboardModules");
 let lang = "en";
 let currentUser = null;
 
