@@ -1,83 +1,95 @@
 # Firebase Project Connection Checklist
 
-## Important
+## Current security posture
 
-This repository has Firebase configuration and **deny-by-default** rules templates. The owner has confirmed the dedicated Firebase project ID: `mr-ahmed-attia-12345`. The repository is configured to target this project, but the Firebase Web App configuration and service enablement have not yet been supplied or verified.
+The dedicated Firebase project is `mr-ahmed-attia-12345`. The web sign-in flow has been tested successfully. The repository now contains an initial Firebase Cloud Functions account-approval backend, but **those functions have not yet been deployed to Firebase**.
 
-Do not deploy these rules to an existing Firebase project until its ownership and current rules have been checked. The current rules intentionally deny every Firestore and Storage request; they are a safe starting point, not a functioning application authorization policy.
+Firestore and Storage client rules remain deny-all. This is intentional: no browser can read student records or write privileged data until collection-specific rules and emulator tests are complete. Do not loosen these rules with broad authenticated-user access.
 
 ## 1. Confirm the correct project
 
-In the Firebase Console:
-1. Open the project intended specifically for **Mr. Ahmed Attia's SAT Reading & Writing LMS**.
-2. Verify that its project ID is exactly `mr-ahmed-attia-12345`.
-3. Do not reuse another teacher's or another application’s Firebase project.
-4. Confirm billing plan, region, data location, and project owners.
-5. Create separate development/staging projects before testing real data.
+1. Open the Firebase project intended specifically for **Mr. Ahmed Attia's SAT Reading & Writing LMS**.
+2. Verify the project ID is exactly `mr-ahmed-attia-12345`.
+3. Confirm project ownership, billing plan, region, and data location.
+4. Keep development/staging separate from production; never use real student records in test environments.
 
-## 2. Register the web application
+## 2. Authentication and web app
 
-1. In Project settings, register a Web App for this LMS.
-2. The supplied web app configuration is stored in the root-level `firebase-config.js` file for this static site. It contains public client identifiers only; do not add admin credentials or private keys.
-3. The Firebase web config is public app identification, not an admin credential. Security must come from Authentication, Firestore/Storage rules, App Check, and trusted server authorization.
-4. Never commit real environment files or service-account keys.
+- Email/Password sign-in is enabled and the deployed Vercel hostname must remain in Authentication → Settings → Authorized domains.
+- The web configuration in `firebase-config.js` contains public client identifiers only. Never put Admin SDK credentials in frontend code.
+- Verify teacher-controlled accounts by email before using them for the initial Main Teacher bootstrap.
 
-Required public web values are listed in `.env.example`. The project ID is prefilled as `mr-ahmed-attia-12345`; the remaining values must come from the registered Firebase Web App configuration.
+## 3. Account approval backend (implemented, not deployed)
 
-## 3. Enable only the services needed for the first milestone
+The `functions/` directory contains callable Cloud Functions:
+- `requestAccountAccess`: verified users may request only Student or Parent access.
+- `getMyAccountStatus`: returns the signed-in user's server-side status.
+- `listPendingAccessRequests`: active Main Teacher/Super Admin only.
+- `reviewAccessRequest`: approves or rejects Student/Parent requests; role claims are set by Firebase Admin SDK only.
 
-- Authentication: enable **Email/Password** in Firebase Console → Authentication → Sign-in method. The current portal supports email/password sign-in and password-reset email; self-registration is intentionally disabled.
-- Authentication → Settings → Authorized domains: ensure the deployed Vercel hostname is listed. Add the production hostname and the preview hostname if you will test sign-in on previews.
-- Confirm the email/password sign-in flow with a teacher-created test account before inviting students.
-- Firestore: create the database in the approved region.
-- Storage: enable only when secure file uploads are ready.
-- App Check: configure for supported production clients.
-- Cloud Functions or another trusted server runtime: use for privileged role changes, approvals, payment verification, protected AI calls, and other privileged operations.
+The current test account is not automatically promoted. Do not assign it a role unless the project owner confirms it is the intended teacher account.
 
-Do not expose admin SDK credentials in frontend code.
+### Bootstrap the first Main Teacher
+
+1. Create Mr. Ahmed's teacher-controlled user in Firebase Authentication.
+2. Verify the email.
+3. Copy that user's Firebase Auth UID from Authentication → Users.
+4. On a trusted local machine, authenticate Application Default Credentials for an identity authorized to administer this Firebase project. Keep credentials outside the repository.
+5. From the repository's `functions` directory run:
+
+```powershell
+npm install
+$env:MAIN_TEACHER_UID = "PASTE_MR_AHMED_AUTH_UID"
+$env:FIREBASE_PROJECT_ID = "mr-ahmed-attia-12345"
+node .\scripts\bootstrap-main-teacher.mjs
+```
+
+The script uses a Firestore one-time bootstrap marker and refuses to replace a different Main Teacher. After a successful bootstrap, Mr. Ahmed must sign out and sign in again to refresh the Firebase ID token.
+
+### Deploy Cloud Functions
+
+From the repository root:
+
+```powershell
+npm install --global firebase-tools
+firebase login
+firebase use mr-ahmed-attia-12345
+cd functions
+npm install
+cd ..
+firebase deploy --only functions
+```
+
+Firebase Functions deployment may require the project to be on the Blaze plan and the relevant Google Cloud APIs enabled. Confirm any billing implications in Firebase Console before deployment. The Git/Vercel deployment does not deploy Firebase Cloud Functions.
 
 ## 4. Rules and emulator workflow
 
-Install the Firebase CLI locally and authenticate with an account authorized for this project. The `.firebaserc` file selects `mr-ahmed-attia-12345` as the default CLI target. Start with the local emulators and test rules before deploying anything. Verify the active Firebase project with `firebase use` before every deploy.
+The current Firestore and Storage rules intentionally deny every client read/write. Keep them that way until scoped rules are implemented and tested.
 
-Example commands:
+Run the local emulators after installing Firebase CLI and Functions dependencies:
 
-```bash
-npm install --global firebase-tools
-firebase login
-firebase use
-firebase emulators:start
+```powershell
+firebase emulators:start --only auth,firestore,functions,storage
 ```
 
-Before deploying rules, write and run tests for:
-- unauthenticated users are denied;
-- pending users cannot read protected learning records;
-- students can read only enrolled and released course content;
-- parents can read only approved linked children;
-- teachers/assistants are limited to assigned courses, groups, and centers;
-- accountants and support staff receive only their authorized records;
-- developers cannot automatically read private student conversations, grades, or financial records;
-- clients cannot grant themselves roles, publish AI content, finalize protected grades, or confirm payments.
+Required tests before opening data access:
+- Unauthenticated and pending users cannot read protected records.
+- Students can read only approved, enrolled, entitled, and released course content.
+- Parents can read only explicitly linked and approved children.
+- Teachers and assistants are limited to assigned courses, groups, and centers.
+- Accountants and support staff receive only their authorized records.
+- Developers cannot automatically read private student chats, grades, or financial records.
+- Clients cannot grant themselves roles, publish AI content, finalize grades, or confirm payments.
+- All privileged changes create audit records.
 
-The current templates deny all access. Do not loosen them with broad authenticated-user access.
+## 5. Current limits
 
-## 5. First backend milestone
-
-Implement and test in this order:
-1. Firebase initialization and environment validation.
-2. Authentication and account lifecycle.
-3. Server-managed role grants and resource scopes.
-4. Firestore/Storage rules and automated rules tests.
-5. Student approval and invitation workflows.
-6. Course/group enrollment and access entitlements.
-7. Audit events for privileged actions.
+- Approval functions support Student and Parent roles only.
+- Parent approval does not create a parent-child relationship.
+- Student approval does not create course enrollment or payment entitlement.
+- No courses, grades, payments, messages, or student records are exposed by this milestone.
+- The backend code must be deployed and emulator-tested before it is treated as active.
 
 ## 6. Before production use
 
-- Confirm production project ownership and authorized administrators.
-- Configure separate production secrets in Vercel.
-- Verify rules and emulator tests in CI.
-- Enable backups and test restore procedures.
-- Configure monitoring, alerts, and App Check.
-- Review privacy, retention, and data-processing settings.
-- Never import real student data until access controls and recovery procedures have been verified.
+Configure App Check, backups and restore tests, monitoring, alerting, retention policies, environment separation, and reviewed collection-specific Firestore/Storage rules. Do not import real student data until authorization and recovery have been verified.
