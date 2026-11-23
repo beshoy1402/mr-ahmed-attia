@@ -221,9 +221,9 @@ function renderDashboard(role) {
   roleDashboard.hidden = false;
 }
 const teacherArabic = {
-  types:{classes:"الفصول",students:"الطلاب",groups:"المجموعات",courses:"الدورات",lessons:"الدروس",questions:"الأسئلة",exams:"الاختبارات",grades:"الدرجات",attendance:"الحضور",homework:"الواجبات",schedules:"الجداول"},
+  metrics:{students:"الطلاب",classes:"الفصول",courses:"الدورات",exams:"الاختبارات",homework:"الواجبات"},quickActions:{student:"إضافة طالب",class:"إنشاء فصل",course:"إنشاء دورة",exam:"إنشاء اختبار",attendance:"تسجيل الحضور"},types:{classes:"الفصول",students:"الطلاب",groups:"المجموعات",courses:"الدورات",lessons:"الدروس",questions:"الأسئلة",exams:"الاختبارات",grades:"الدرجات",attendance:"الحضور",homework:"الواجبات",schedules:"الجداول"},
   fields:{name:"الاسم",displayName:"اسم الطالب",email:"البريد الإلكتروني",phone:"رقم الهاتف",classId:"الفصل",parentName:"اسم ولي الأمر",parentEmail:"بريد ولي الأمر",notes:"ملاحظات",status:"الحالة",title:"العنوان",subject:"المادة",level:"المستوى",schedule:"الموعد",room:"القاعة",description:"الوصف",courseId:"الدورة",unit:"الوحدة / الفصل",content:"محتوى الدرس",resourceUrl:"رابط المادة",durationMinutes:"المدة بالدقائق",prompt:"نص السؤال",passage:"قطعة القراءة",options:"الاختيارات (كل اختيار في سطر)",correctAnswer:"الإجابة الصحيحة",explanation:"الشرح",domain:"مجال SAT",skill:"المهارة",difficulty:"مستوى الصعوبة",examId:"الاختبار",score:"الدرجة",maxScore:"الدرجة النهائية",feedback:"ملاحظات المدرس",published:"نشر الدرجة",date:"التاريخ",startsAt:"وقت البداية",endsAt:"وقت النهاية",dueAt:"موعد التسليم",meetingUrl:"رابط اللقاء"},
-  loading:"جارٍ تحميل مساحة المدرس…",search:"ابحث في السجلات",add:"إضافة",edit:"تعديل",archive:"أرشفة",cancel:"إلغاء",save:"حفظ",saveChanges:"حفظ التعديلات",addRecord:"إضافة سجل",select:"اختر…",noMatch:"لا توجد نتائج مطابقة.",empty:"لا توجد سجلات بعد. استخدم الزر أعلاه لإضافة أول سجل.",quick:"إجراءات سريعة",private:"سجلاتك خاصة بحساب المدرس. يتم حفظ التغييرات بشكل آمن.",roster:"ملاحظة: هذه سجلات لإدارة قائمة الطلاب وليست حسابات تسجيل دخول. إنشاء حساب الطالب ودعوته عملية منفصلة.",archiveConfirm:"هل تريد أرشفة هذا السجل؟ سيختفي من مساحة العمل النشطة.",archived:"تمت أرشفة السجل.",saved:"تم الحفظ بنجاح.",choices:"اختيار أ\nاختيار ب\nاختيار ج\nاختيار د",draft:"مسودة",active:"نشط",published:"منشور",archivedStatus:"مؤرشف"
+  quickActions:{student:"إضافة طالب",class:"إنشاء فصل",course:"إنشاء دورة",exam:"إنشاء اختبار",attendance:"تسجيل الحضور"},metrics:{students:"الطلاب",classes:"الفصول",courses:"الدورات",exams:"الاختبارات",homework:"الواجبات"},loading:"جارٍ تحميل مساحة المدرس…",search:"ابحث في السجلات",add:"إضافة",edit:"تعديل",archive:"أرشفة",cancel:"إلغاء",save:"حفظ",saveChanges:"حفظ التعديلات",addRecord:"إضافة سجل",select:"اختر…",noMatch:"لا توجد نتائج مطابقة.",empty:"لا توجد سجلات بعد. استخدم الزر أعلاه لإضافة أول سجل.",quick:"إجراءات سريعة",private:"سجلاتك خاصة بحساب المدرس. يتم حفظ التغييرات بشكل آمن.",roster:"ملاحظة: هذه سجلات لإدارة قائمة الطلاب وليست حسابات تسجيل دخول. إنشاء حساب الطالب ودعوته عملية منفصلة.",archiveConfirm:"هل تريد أرشفة هذا السجل؟ سيختفي من مساحة العمل النشطة.",archived:"تمت أرشفة السجل.",saved:"تم الحفظ بنجاح.",choices:"اختيار أ\nاختيار ب\nاختيار ج\nاختيار د",draft:"مسودة",active:"نشط",published:"منشور",archivedStatus:"مؤرشف"
 };
 function teacherTr(en, key) { return lang === "ar" ? (teacherArabic[key] || en) : en; }
 function teacherTypeName(type) { return lang === "ar" ? (teacherArabic.types[type] || type) : type; }
@@ -277,12 +277,12 @@ function renderTeacherModule(index) {
     [["Students", "students"],["Classes","classes"],["Courses","courses"],["Exams","exams"],["Homework","homework"]].forEach(([label,type])=>{
       const count=active.filter(item=>item.type===type).length;
       const card=teacherText("div","teacher-metric","");
-      card.append(teacherText("small","",label),teacherText("strong","",String(count)));
+      card.append(teacherText("small","",lang==="ar"?(teacherArabic.metrics?.[type]||label):label),teacherText("strong","",String(count)));
       metrics.append(card);
     });
     teacherWorkspacePanel.append(metrics,teacherText("h4","teacher-subheading",teacherTr("Quick actions","quick")));
     const quick=document.createElement("div");quick.className="teacher-quick-actions";
-    [["Add student","students",1],["Create class","classes",1],["Create course","courses",2],["Create exam","exams",3],["Record attendance","attendance",5]].forEach(([label,type,module])=>quick.append(teacherButton(label,"teacher-action",()=>{teacherActiveType=type;renderTeacherModule(module);})));
+    [["Add student","students",1,"student"],["Create class","classes",1,"class"],["Create course","courses",2,"course"],["Create exam","exams",3,"exam"],["Record attendance","attendance",5,"attendance"]].forEach(([label,type,module,key])=>quick.append(teacherButton(lang==="ar"?(teacherArabic.quickActions?.[key]||label):label,"teacher-action",()=>{teacherActiveType=type;renderTeacherModule(module);})));
     teacherWorkspacePanel.append(quick,teacherText("p","teacher-hint",teacherTr("Your records are private to your teacher account. Changes are saved securely.","private")));
     return;
   }
@@ -293,6 +293,7 @@ function renderTeacherModule(index) {
     selector.append(button);
   });
   if(!types.includes(teacherActiveType)) teacherActiveType=types[0];
+  selector.querySelectorAll("button").forEach((button,i)=>button.classList.toggle("active",types[i]===teacherActiveType));
   teacherWorkspacePanel.append(selector);
   const currentType=teacherActiveType;
   if(currentType==="students") teacherWorkspacePanel.append(teacherText("p","teacher-hint",teacherTr("Roster records are not login accounts. Student account creation and invitations are separate.","roster")));
