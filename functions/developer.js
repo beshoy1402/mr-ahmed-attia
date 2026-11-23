@@ -99,7 +99,8 @@ async function assertFeatureEnabled(featureId, role, clientId = null, userUid = 
   }
   if (config.testMode && role !== "developer" && !(config.betaUserUids || []).includes(userUid)) {
     throw new HttpsError("permission-denied", "This feature is currently available only to selected beta testers.");
-  }\n  const schedule = config.schedule || {};
+  }
+  const schedule = config.schedule || {};
   const now = Date.now();
   if (schedule.startsAt && now < Date.parse(schedule.startsAt)) throw new HttpsError("unavailable", "This capability is not active yet.");
   if (schedule.endsAt && now >= Date.parse(schedule.endsAt)) throw new HttpsError("unavailable", "This capability's scheduled access has ended.");
