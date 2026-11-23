@@ -119,14 +119,15 @@ async function audit(actor, type, target, metadata = {}) {
 
 exports.getDeveloperConsole = onCall(async (request) => {
   const actor = requireDeveloper(request);
-  const [featureSnap, templateSnap, settingsSnap, requestSnap, auditSnap, taskSnap, bugSnap] = await Promise.all([
+  const [featureSnap, templateSnap, settingsSnap, requestSnap, auditSnap, taskSnap, bugSnap, loginSnap] = await Promise.all([
     db.collection("developerFeatureSettings").get(),
     db.collection("developerFeatureTemplates").orderBy("updatedAt", "desc").limit(30).get(),
     db.doc("developerSettings/global").get(),
     db.collection("developerFeatureRequests").orderBy("createdAt", "desc").limit(30).get(),
     db.collection("auditEvents").orderBy("createdAt", "desc").limit(30).get(),
     db.collection("developerTasks").orderBy("createdAt", "desc").limit(50).get(),
-    db.collection("developerBugReports").orderBy("createdAt", "desc").limit(50).get()
+    db.collection("developerBugReports").orderBy("createdAt", "desc").limit(50).get(),
+    db.collection("loginEvents").orderBy("createdAt", "desc").limit(50).get()
   ]);
   const configs = Object.fromEntries(featureSnap.docs.map((doc) => [doc.id, doc.data()]));
   return {
@@ -138,6 +139,7 @@ exports.getDeveloperConsole = onCall(async (request) => {
     audit: auditSnap.docs.filter((doc) => doc.data().actorRole === "developer" || doc.data().actorRole === "superAdmin").map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
     tasks: taskSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null, updatedAt: doc.data().updatedAt?.toDate?.().toISOString?.() || null })),
     bugs: bugSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
+    logins: loginSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null })),
     integrations: {
       firebase: { status: "connected", detail: "Callable backend authenticated" },
       firestoreMetrics: { status: "not-configured", detail: "Enable Cloud Monitoring metrics and grant a read-only metrics integration to display live usage." },
@@ -418,6 +420,40 @@ exports.setManagedAccountStatus = onCall(async (request) => {
   }, { merge: true });
   await audit(actor, disabled ? "managed_account_deactivated" : "managed_account_reactivated", uid, { email: target.email || null, role: claims.role || null });
   return { success: true, disabled };
+});
+
+exports.recordAuthenticatedLogin = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  const uid = request.auth.uid;
+  const stateRef = db.doc("loginEventState/" + uid);
+  const eventRef = db.collection("loginEvents").doc();
+  const now = Date.now();
+  let result;
+  await db.runTransaction(async (tx) => {
+    const stateSnap = await tx.get(stateRef);
+    const state = stateSnap.exists ? stateSnap.data() : {};
+    const last = state.lastLoginAt?.toMillis?.() || 0;
+    if (now - last < 30000) {
+      result = { recorded: false, suspicious: state.suspicious === true };
+      return;
+    }
+    const windowStart = state.windowStartedAt?.toMillis?.() || 0;
+    const count = now - windowStart < 10 * 60 * 1000 ? (state.windowCount || 0) + 1 : 1;
+    const suspicious = count >= 6;
+    tx.set(stateRef, {
+      lastLoginAt: FieldValue.serverTimestamp(),
+      windowStartedAt: count === 1 ? FieldValue.serverTimestamp() : (state.windowStartedAt || FieldValue.serverTimestamp()),
+      windowCount: count, suspicious, updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    tx.set(eventRef, {
+      uid, email: request.auth.token.email || null,
+      role: request.auth.token.role || null,
+      userAgent: clean(request.data?.userAgent, 300),
+      suspicious, createdAt: FieldValue.serverTimestamp()
+    });
+    result = { recorded: true, suspicious };
+  });
+  return result;
 });
 
 exports.submitDeveloperBugReport = onCall(async (request) => {
