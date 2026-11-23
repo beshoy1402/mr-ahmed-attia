@@ -310,7 +310,7 @@ exports.createManagedAccount = onCall(async (request) => {
   }
   const email = clean(request.data?.email, 254).toLowerCase();
   const displayName = clean(request.data?.displayName, 100);
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || displayName.length < 2) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || displayName.length < 2) {
     throw new HttpsError("invalid-argument", "Enter a valid email and a name with at least two characters.");
   }
   let user;
