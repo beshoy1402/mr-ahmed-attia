@@ -28,8 +28,20 @@ function cleanText(value, max) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+async function assertSystemWritable() {
+  const snap = await db.doc("developerSettings/global").get();
+  const settings = snap.exists ? snap.data() : {};
+  if (settings.readOnly) throw new HttpsError("failed-precondition", "The platform is currently in read-only mode.");
+  if (settings.emergencyMode) throw new HttpsError("unavailable", "The platform is temporarily in emergency mode.");
+  return settings;
+}
+
 exports.requestAccountAccess = onCall(async (request) => {
   const auth = requireUser(request);
+  const controls = await assertSystemWritable();
+  if (controls.loginLockdown && auth.token.role !== "developer") {
+    throw new HttpsError("permission-denied", "Platform sign-in access is temporarily restricted.");
+  }
   const uid = auth.uid;
   if (auth.token.role) {
     throw new HttpsError("already-exists", "This account already has an assigned role. Contact the teacher if it needs to change.");
@@ -97,6 +109,11 @@ exports.requestAccountAccess = onCall(async (request) => {
 
 exports.getMyAccountStatus = onCall(async (request) => {
   const auth = requireUser(request);
+  const controlsSnap = await db.doc("developerSettings/global").get();
+  const controls = controlsSnap.exists ? controlsSnap.data() : {};
+  if (controls.loginLockdown && auth.token.role !== "developer") {
+    throw new HttpsError("permission-denied", "Platform sign-in access is temporarily restricted.");
+  }
   const [profileSnap, requestSnap] = await Promise.all([
     db.doc(`userProfiles/${auth.uid}`).get(),
     db.doc(`accessRequests/${auth.uid}`).get()
@@ -110,7 +127,8 @@ exports.getMyAccountStatus = onCall(async (request) => {
     requestedRole: accessRequest?.requestedRole || null,
     displayName: profile?.displayName || accessRequest?.displayName || null,
     reviewedAt: profile?.reviewedAt?.toDate?.().toISOString?.() || null,
-    canReviewRequests: ["mainTeacher", "superAdmin"].includes(auth.token.role) && auth.token.accountStatus === "active"
+    canReviewRequests: ["mainTeacher", "superAdmin"].includes(auth.token.role) && auth.token.accountStatus === "active",
+    platformControls: { maintenance: controls.maintenance === true, maintenanceMessage: controls.maintenanceMessage || "", readOnly: controls.readOnly === true, emergencyMode: controls.emergencyMode === true }
   };
 });
 
@@ -138,6 +156,7 @@ exports.listPendingAccessRequests = onCall(async (request) => {
 
 exports.reviewAccessRequest = onCall(async (request) => {
   const reviewer = requireApprover(request);
+  await assertSystemWritable();
   const targetUid = cleanText(request.data?.uid, 128);
   const decision = request.data?.decision;
   if (!targetUid || targetUid === reviewer.uid) {
@@ -234,3 +253,6 @@ exports.reviewAccessRequest = onCall(async (request) => {
 
   return { status: finalStatus };
 });
+
+// Secure Developer-only callable functions. Firestore client rules remain deny-all.
+Object.assign(exports, require("./developer"));

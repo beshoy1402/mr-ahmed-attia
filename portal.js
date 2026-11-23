@@ -1,12 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+import { createCallable } from "./api-client.js";
 import { firebaseConfig } from "/firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const functions = getFunctions(app, "us-central1");
-const call = name => httpsCallable(functions, name);
+const call = createCallable(auth);
 const form = document.getElementById("loginForm");
 const loginButton = document.getElementById("loginButton");
 const message = document.getElementById("message");
@@ -18,7 +17,31 @@ const accountStatus = document.getElementById("accountStatus");
 const requestForm = document.getElementById("requestAccessForm");
 const requestButton = document.getElementById("requestAccessButton");
 const teacherPanel = document.getElementById("teacherPanel");
+const featureRequestForm = document.getElementById("featureRequestForm");
+const bugReportForm = document.getElementById("bugReportForm");
+const bugReportButton = document.getElementById("bugReportButton");
+const featureRequestButton = document.getElementById("featureRequestButton");
 const pendingList = document.getElementById("pendingList");
+const roleDashboard = document.getElementById("roleDashboard");
+const dashboardTitle = document.getElementById("dashboardTitle");
+const dashboardDescription = document.getElementById("dashboardDescription");
+const dashboardModules = document.getElementById("dashboardModules");
+const roleNav = document.getElementById("roleNav");
+const roleDetail = document.getElementById("roleDetail");
+const roleDetailTitle = document.getElementById("roleDetailTitle");
+const roleDetailText = document.getElementById("roleDetailText");
+const roleUserEmail = document.getElementById("roleUserEmail");
+const roleLabel = document.getElementById("roleLabel");
+const roleWelcomeTitle = document.getElementById("roleWelcomeTitle");
+const roleWelcomeText = document.getElementById("roleWelcomeText");
+const roleWelcomeKicker = document.getElementById("roleWelcomeKicker");
+const roleModulesHeading = document.getElementById("roleModulesHeading");
+const roleQuicklinks = document.getElementById("roleQuicklinks");
+const roleDetailStatus = document.getElementById("roleDetailStatus");
+const teacherWorkspacePanel = document.getElementById("teacherWorkspacePanel");
+let teacherRecords = [];
+let teacherIssuedCredentials = null;
+let teacherActiveType = "classes";
 let lang = "en";
 let currentUser = null;
 
@@ -102,15 +125,309 @@ function makeButton(label, className, onClick) {
   return button;
 }
 
+const dashboards = {
+  en: {
+    student: { title: "Student Dashboard", description: "Your learning space for lessons, practice and progress.", modules: [["My courses","View enrolled learning programs."],["Lessons & resources","Continue approved lessons and study materials."],["Practice & exams","Work through skill practice and timed tests."],["Assignments","Review tasks and submit completed work."],["Grades & progress","Track released results and learning progress."],["Attendance","Review your recorded attendance."]] },
+    parent: { title: "Parent Dashboard", description: "A family view of linked students and their learning activity.", modules: [["My children","Switch between children linked and approved by the teacher."],["Learning progress","Review each child's learning progress."],["Grades","View released grades for linked children."],["Attendance","Review attendance records."],["Homework","Follow assignments and completion."],["Payments & notices","Review authorized payment summaries and announcements."]] },
+    teacher: { title: "Teacher Dashboard", description: "Teaching workspace for classes, learning content and assessments.", modules: [["Overview","Review teaching activity and class summaries."],["Students & classes","Manage assigned students and groups."],["Courses & lessons","Organize learning programs and lesson content."],["Question bank & exams","Prepare practice questions and assessments."],["Grades","Review and publish authorized results."],["Attendance & homework","Manage class attendance and assignments."],["Analytics & reports","Review class, grade and attendance insights."]] },
+    assistant: { title: "Assistant Dashboard", description: "A limited workspace for students and groups assigned to you.", modules: [["Assigned students","See only students assigned to your account."],["Attendance follow-up","Support attendance tracking for assigned groups."],["Homework follow-up","Track completion and follow-up tasks."],["Class support","View permitted class schedules and notices."]] },
+    superAdmin: { title: "Administrator Dashboard", description: "System administration and access oversight.", modules: [["User accounts","Review account status and role assignments."],["Access requests","Review pending Student and Parent access requests."],["Staff & permissions","Manage staff access through trusted workflows."],["Reports","View approved system and operational summaries."],["Audit history","Review security and administrative events."],["System settings","Manage approved platform configuration."]] }
+  },
+  ar: {
+    student: { title: "لوحة الطالب", description: "مساحتك التعليمية للدروس والتدريب ومتابعة التقدم.", modules: [["دوراتي","عرض البرامج التعليمية المسجل بها."],["الدروس والمصادر","متابعة الدروس والمواد المعتمدة."],["التدريب والاختبارات","التدريب على المهارات والاختبارات المحددة بوقت."],["الواجبات","مراجعة المهام وتسليم الأعمال."],["الدرجات والتقدم","متابعة النتائج المنشورة والتقدم."],["الحضور","مراجعة سجل الحضور."]] },
+    parent: { title: "لوحة ولي الأمر", description: "متابعة الطلاب المرتبطين بحسابك والمعتمدين من المدرس.", modules: [["أبنائي","التنقل بين الأبناء المرتبطين والمعتمدين فقط."],["التقدم التعليمي","متابعة تقدم كل طالب."],["الدرجات","عرض الدرجات المنشورة للأبناء المرتبطين."],["الحضور","مراجعة سجلات الحضور."],["الواجبات","متابعة الواجبات وحالة الإنجاز."],["المدفوعات والإعلانات","مراجعة الملخصات والإعلانات المصرح بها."]] },
+    teacher: { title: "لوحة المدرس", description: "مساحة لإدارة الفصول والمحتوى والتقييمات.", modules: [["نظرة عامة","متابعة نشاط التدريس وملخصات الفصول."],["الطلاب والفصول","إدارة الطلاب والمجموعات المسندة."],["الدورات والدروس","تنظيم البرامج والمحتوى التعليمي."],["بنك الأسئلة والاختبارات","إعداد الأسئلة والتقييمات التدريبية."],["الدرجات","مراجعة النتائج المصرح بها ونشرها."],["الحضور والواجبات","إدارة الحضور والمهام."],["التقارير والتحليلات","مراجعة مؤشرات الفصول والدرجات والحضور."]] },
+    assistant: { title: "لوحة المساعد", description: "مساحة محدودة للطلاب والمجموعات المسندة إليك.", modules: [["الطلاب المسندون","عرض الطلاب المسندين إلى حسابك فقط."],["متابعة الحضور","دعم تسجيل الحضور للمجموعات المسندة."],["متابعة الواجبات","متابعة الإنجاز والمهام."],["دعم الفصول","عرض الجداول والإعلانات المصرح بها."]] },
+    superAdmin: { title: "لوحة المسؤول", description: "إدارة النظام ومراجعة صلاحيات الوصول.", modules: [["حسابات المستخدمين","مراجعة حالة الحسابات وتعيين الأدوار."],["طلبات الوصول","مراجعة طلبات الطلاب وأولياء الأمور."],["الفريق والصلاحيات","إدارة صلاحيات الفريق عبر إجراءات موثوقة."],["التقارير","عرض الملخصات المصرح بها."],["سجل التدقيق","مراجعة الأحداث الأمنية والإدارية."],["إعدادات النظام","إدارة إعدادات المنصة المعتمدة."]] }
+  }
+};
+
+function renderDashboard(role) {
+  const dashboardRole = ["mainTeacher","additionalTeacher"].includes(role) ? "teacher" : role;
+  const config = dashboards[lang][dashboardRole];
+  if (!config) { roleDashboard.hidden = true; return; }
+  const roleNames = {
+    en: {student:"STUDENT SPACE",parent:"PARENT SPACE",teacher:"TEACHER WORKSPACE",assistant:"ASSISTANT WORKSPACE",superAdmin:"ADMINISTRATION"},
+    ar: {student:"مساحة الطالب",parent:"مساحة ولي الأمر",teacher:"مساحة المدرس",assistant:"مساحة المساعد",superAdmin:"إدارة المنصة"}
+  };
+  const welcome = {
+    en: {
+      student:["Ready to keep learning?","Your courses, practice and learning updates will be organized here."],
+      parent:["Stay connected to their learning.","A clear place for approved updates about linked children."],
+      teacher:["Your teaching workspace starts here.","Keep your classes, learning resources and assessment tools organized."],
+      assistant:["Your class support workspace.","Find your assigned support areas and follow-up sections here."],
+      superAdmin:["Platform administration, made clearer.","Manage approved account and platform workflows from one organized workspace."]
+    },
+    ar: {
+      student:["مستعد لمواصلة التعلم؟","ستجد هنا تنظيمًا لدوراتك وتدريباتك وتحديثاتك التعليمية."],
+      parent:["تابع رحلتهم التعليمية بسهولة.","مساحة واضحة لمتابعة التحديثات المعتمدة للأبناء المرتبطين بحسابك."],
+      teacher:["مساحة عملك التعليمية تبدأ من هنا.","نظّم الفصول والمصادر التعليمية وأدوات التقييم في مكان واحد."],
+      assistant:["مساحة دعم الفصول الخاصة بك.","اعثر هنا على أقسام المتابعة والدعم المسندة إلى حسابك."],
+      superAdmin:["إدارة المنصة بصورة أكثر وضوحًا.","أدر الحسابات وسير العمل المعتمد من مساحة منظمة."]
+    }
+  };
+  dashboardTitle.textContent = config.title;
+  dashboardDescription.textContent = config.description;
+  roleLabel.textContent = roleNames[lang][dashboardRole] || "LEARNING PORTAL";
+  roleUserEmail.textContent = currentUser?.email || auth.currentUser?.email || (lang === "ar" ? "حسابك" : "Your account");
+  roleWelcomeTitle.textContent = welcome[lang][dashboardRole][0];
+  roleWelcomeText.textContent = welcome[lang][dashboardRole][1];
+  roleWelcomeKicker.textContent = lang === "ar" ? "مرحبًا بك في مساحة عملك" : "WELCOME TO YOUR WORKSPACE";
+  roleModulesHeading.textContent = lang === "ar" ? "أقسام مساحة العمل" : "Your workspace";
+  dashboardModules.replaceChildren();
+  roleNav.replaceChildren();
+  const showModule = (index) => {
+    const item = config.modules[index];
+    if (!item) return;
+    roleNav.querySelectorAll("button").forEach((button,i)=>button.classList.toggle("active",i===index));
+    roleDetailTitle.textContent = item[0];
+    roleDetailText.textContent = item[1];
+    roleDetail.hidden = false;
+    roleDetail.classList.add("active");
+    if (dashboardRole === "teacher") {
+      roleDetailStatus.hidden = true;
+      renderTeacherModule(index);
+    } else {
+      roleDetailStatus.hidden = false;
+      teacherWorkspacePanel.hidden = true;
+    }
+  };
+  config.modules.forEach(([title, description], index) => {
+    const navButton = document.createElement("button");
+    navButton.type = "button";
+    navButton.textContent = title;
+    navButton.addEventListener("click",()=>showModule(index));
+    roleNav.append(navButton);
+    const tile = document.createElement("article");
+    tile.className = "dashboard-tile";
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    const detail = document.createElement("span");
+    detail.textContent = description;
+    const lock = document.createElement("div");
+    lock.className = "dashboard-lock";
+    lock.textContent = dashboardRole === "teacher" ? (lang === "ar" ? "فتح القسم" : "OPEN SECTION") : (lang === "ar" ? "غير مفعّل بعد" : "NOT ENABLED YET");
+    tile.append(heading,detail,lock);
+    if (dashboardRole === "teacher") { tile.tabIndex = 0; tile.setAttribute("role","button"); tile.addEventListener("click",()=>showModule(index)); tile.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();showModule(index);}}); }
+    dashboardModules.append(tile);
+  });
+  roleQuicklinks.replaceChildren();
+  if (role === "superAdmin") {
+    const link = document.createElement("a");
+    link.href = "/admin-accounts.html";
+    link.textContent = lang === "ar" ? "إدارة الحسابات التعليمية" : "Open account management";
+    roleQuicklinks.append(link);
+  }
+  showModule(0);
+  roleDashboard.hidden = false;
+}
+const teacherArabic = {
+  metrics:{students:"الطلاب",classes:"الفصول",courses:"الدورات",exams:"الاختبارات",homework:"الواجبات"},quickActions:{student:"إضافة طالب",class:"إنشاء فصل",course:"إنشاء دورة",exam:"إنشاء اختبار",attendance:"تسجيل الحضور"},types:{classes:"الفصول",students:"الطلاب",groups:"المجموعات",courses:"الدورات",lessons:"الدروس",questions:"الأسئلة",exams:"الاختبارات",grades:"الدرجات",attendance:"الحضور",homework:"الواجبات",schedules:"الجداول"},
+  fields:{name:"الاسم",displayName:"اسم الطالب",email:"البريد الإلكتروني",phone:"رقم الهاتف",classId:"الفصل",parentName:"اسم ولي الأمر",parentEmail:"بريد ولي الأمر",notes:"ملاحظات",status:"الحالة",title:"العنوان",subject:"المادة",level:"المستوى",schedule:"الموعد",room:"القاعة",description:"الوصف",courseId:"الدورة",unit:"الوحدة / الفصل",content:"محتوى الدرس",resourceUrl:"رابط المادة",durationMinutes:"المدة بالدقائق",prompt:"نص السؤال",passage:"قطعة القراءة",options:"الاختيارات (كل اختيار في سطر)",correctAnswer:"الإجابة الصحيحة",explanation:"الشرح",domain:"مجال SAT",skill:"المهارة",difficulty:"مستوى الصعوبة",examId:"الاختبار",score:"الدرجة",maxScore:"الدرجة النهائية",feedback:"ملاحظات المدرس",published:"نشر الدرجة",date:"التاريخ",startsAt:"وقت البداية",endsAt:"وقت النهاية",dueAt:"موعد التسليم",meetingUrl:"رابط اللقاء"},
+  createLogin:"إنشاء حساب دخول",linkedLogin:"حساب الدخول مرتبط",copyPassword:"نسخ كلمة المرور",dismiss:"إغلاق",credentialTitle:"تم إنشاء حساب الطالب",credentialWarning:"احفظ كلمة المرور المؤقتة الآن. لن تظهر مرة أخرى.",createLoginConfirm:"إنشاء حساب دخول لهذا الطالب؟ سيتم إنشاء كلمة مرور مؤقتة لعرضها مرة واحدة.",loading:"جارٍ تحميل مساحة المدرس…",search:"ابحث في السجلات",add:"إضافة",edit:"تعديل",archive:"أرشفة",cancel:"إلغاء",save:"حفظ",saveChanges:"حفظ التعديلات",addRecord:"إضافة سجل",select:"اختر…",noMatch:"لا توجد نتائج مطابقة.",empty:"لا توجد سجلات بعد. استخدم الزر أعلاه لإضافة أول سجل.",quick:"إجراءات سريعة",private:"سجلاتك خاصة بحساب المدرس. يتم حفظ التغييرات بشكل آمن.",roster:"لا يحصل سجل الطالب على حساب دخول إلا بعد اختيار إنشاء حساب دخول. تظهر كلمة المرور المؤقتة مرة واحدة.",archiveConfirm:"هل تريد أرشفة هذا السجل؟ سيختفي من مساحة العمل النشطة.",archived:"تمت أرشفة السجل.",saved:"تم الحفظ بنجاح.",choices:"اختيار أ\nاختيار ب\nاختيار ج\nاختيار د",draft:"مسودة",active:"نشط",published:"منشور",archivedStatus:"مؤرشف"
+};
+function teacherTr(en, key) { return lang === "ar" ? (teacherArabic[key] || en) : en; }
+function teacherTypeName(type) { return lang === "ar" ? (teacherArabic.types[type] || type) : type; }
+const teacherSectionTypes = {
+  1: ["students","classes","groups"],
+  2: ["courses","lessons"],
+  3: ["questions","exams"],
+  4: ["grades"],
+  5: ["attendance","homework","schedules"]
+};
+const teacherFieldDefs = {
+  classes: [["name","Class name","text",true],["subject","Subject","text"],["level","Level","text"],["schedule","Schedule","text"],["room","Room","text"],["description","Description","textarea"],["status","Status","status"]],
+  students: [["displayName","Student name","text",true],["email","Email","email"],["phone","Phone","tel"],["classId","Class","ref:classes"],["parentName","Parent name","text"],["parentEmail","Parent email","email"],["notes","Notes","textarea"],["status","Status","status"]],
+  groups: [["name","Group name","text",true],["classId","Class","ref:classes"],["description","Description","textarea"],["status","Status","status"]],
+  courses: [["title","Course title","text",true],["subject","Subject","text"],["level","Level","text"],["description","Description","textarea"],["status","Status","status"]],
+  lessons: [["title","Lesson title","text",true],["courseId","Course","ref:courses",true],["unit","Unit / chapter","text"],["content","Lesson content","textarea"],["resourceUrl","Resource URL","url"],["durationMinutes","Duration (minutes)","number"],["status","Status","status"]],
+  questions: [["prompt","Question prompt","textarea",true],["passage","Reading passage","textarea"],["options","Answer choices (one per line)","textarea"],["correctAnswer","Correct answer","text"],["explanation","Explanation","textarea"],["domain","SAT domain","text"],["skill","Skill","text"],["difficulty","Difficulty","select:Easy,Medium,Hard"],["status","Status","status"]],
+  exams: [["title","Exam title","text",true],["classId","Class","ref:classes"],["courseId","Course","ref:courses"],["description","Instructions","textarea"],["durationMinutes","Duration (minutes)","number"],["startsAt","Start date and time","datetime-local"],["endsAt","End date and time","datetime-local"],["status","Status","status"]],
+  grades: [["studentId","Student","ref:students",true],["examId","Exam","ref:exams"],["score","Score","number",true],["maxScore","Maximum score","number",true],["feedback","Feedback","textarea"],["published","Publish grade","checkbox"]],
+  attendance: [["studentId","Student","ref:students",true],["classId","Class","ref:classes"],["date","Date","date",true],["status","Attendance","select:present,absent,late,excused",true],["notes","Notes","textarea"]],
+  homework: [["title","Homework title","text",true],["classId","Class","ref:classes"],["courseId","Course","ref:courses"],["description","Instructions","textarea"],["dueAt","Due date","datetime-local"],["status","Status","status"]],
+  schedules: [["title","Session title","text",true],["classId","Class","ref:classes"],["startsAt","Starts at","datetime-local",true],["endsAt","Ends at","datetime-local",true],["room","Room","text"],["meetingUrl","Meeting link","url"],["status","Status","status"]]
+};
+function teacherText(tag, className, value) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = value || "";
+  return node;
+}
+function teacherButton(label, className, action) {
+  const button = makeButton(label, className, action);
+  return button;
+}
+async function loadTeacherWorkspace() {
+  teacherWorkspacePanel.replaceChildren(teacherText("p","teacher-loading",teacherTr("Loading your teaching workspace…","loading")));
+  try {
+    const response = await call("getTeacherWorkspace")();
+    teacherRecords = response.data.records || [];
+    renderTeacherModule(teacherCurrentModule);
+  } catch (error) {
+    teacherWorkspacePanel.replaceChildren(teacherText("p","teacher-error",error.message || "Could not load teacher data."));
+  }
+}
+function renderTeacherModule(index) {
+  teacherCurrentModule = index;
+  teacherWorkspacePanel.hidden = false;
+  teacherWorkspacePanel.replaceChildren();
+  if (teacherIssuedCredentials) {
+    const credentials=document.createElement("section");credentials.className="teacher-credentials";
+    credentials.append(teacherText("strong","",teacherTr("Student login created","credentialTitle")),teacherText("p","",teacherIssuedCredentials.email),teacherText("code","teacher-password",teacherIssuedCredentials.password),teacherText("p","",teacherTr("Save this temporary password now. It will not be shown again.","credentialWarning")));
+    const actions=document.createElement("div");actions.className="teacher-form-actions";
+    actions.append(teacherButton(teacherTr("Copy password","copyPassword"),"teacher-action primary",async()=>{try{await navigator.clipboard.writeText(teacherIssuedCredentials.password);showMessage("Temporary password copied.","success");}catch{showMessage("Select and copy the password shown above.");}}),teacherButton(teacherTr("Dismiss","dismiss"),"teacher-small",()=>{teacherIssuedCredentials=null;renderTeacherModule(index);}));
+    credentials.append(actions);teacherWorkspacePanel.append(credentials);
+  }
+  if (index === 0) {
+    const active = teacherRecords.filter(item=>item.status!=="archived");
+    const metrics = document.createElement("div"); metrics.className="teacher-metrics";
+    [["Students", "students"],["Classes","classes"],["Courses","courses"],["Exams","exams"],["Homework","homework"]].forEach(([label,type])=>{
+      const count=active.filter(item=>item.type===type).length;
+      const card=teacherText("div","teacher-metric","");
+      card.append(teacherText("small","",lang==="ar"?(teacherArabic.metrics?.[type]||label):label),teacherText("strong","",String(count)));
+      metrics.append(card);
+    });
+    teacherWorkspacePanel.append(metrics,teacherText("h4","teacher-subheading",teacherTr("Quick actions","quick")));
+    const quick=document.createElement("div");quick.className="teacher-quick-actions";
+    [["Add student","students",1,"student"],["Create class","classes",1,"class"],["Create course","courses",2,"course"],["Create exam","exams",3,"exam"],["Record attendance","attendance",5,"attendance"]].forEach(([label,type,module,key])=>quick.append(teacherButton(lang==="ar"?(teacherArabic.quickActions?.[key]||label):label,"teacher-action",()=>{teacherActiveType=type;renderTeacherModule(module);})));
+    teacherWorkspacePanel.append(quick,teacherText("p","teacher-hint",teacherTr("Your records are private to your teacher account. Changes are saved securely.","private")));
+    return;
+  }
+  if (index === 6) {
+    const active=teacherRecords.filter(item=>item.status!=="archived");
+    const grades=active.filter(item=>item.type==="grades"&&Number(item.maxScore)>0);
+    const attendance=active.filter(item=>item.type==="attendance");
+    const average=grades.length?Math.round(grades.reduce((sum,item)=>sum+(Number(item.score)/Number(item.maxScore))*100,0)/grades.length):null;
+    const attended=attendance.filter(item=>["present","late"].includes(item.status)).length;
+    const attendanceRate=attendance.length?Math.round(attended/attendance.length*100):null;
+    const metrics=document.createElement("div");metrics.className="teacher-metrics";
+    [["Students",active.filter(x=>x.type==="students").length,"الطلاب"],["Classes",active.filter(x=>x.type==="classes").length,"الفصول"],["Average grade",average===null?"—":average+"%","متوسط الدرجات"],["Attendance rate",attendanceRate===null?"—":attendanceRate+"%","معدل الحضور"],["Homework",active.filter(x=>x.type==="homework").length,"الواجبات"]].forEach(([label,value,ar])=>{
+      const card=teacherText("div","teacher-metric","");card.append(teacherText("small","",lang==="ar"?ar:label),teacherText("strong","",String(value)));metrics.append(card);
+    });
+    teacherWorkspacePanel.append(metrics,teacherText("p","teacher-hint",lang==="ar"?"تعتمد هذه المؤشرات على السجلات الموجودة في مساحة المدرس فقط. لا يتم إنشاء درجات أو بيانات تقديرية.":"These insights use only records saved in your teacher workspace. No grades or activity data are invented."));
+    const exportButton=teacherButton(lang==="ar"?"تصدير تقرير CSV":"Export CSV report","teacher-action primary",()=>{
+      const columns=["type","id","displayName","name","title","studentId","classId","courseId","score","maxScore","status","date","dueAt","updatedAt"];
+      const csv=[columns.join(","),...active.map(item=>columns.map(key=>'"'+String(item[key]??"").replace(/"/g,'""')+'"').join(","))].join("\r\n");
+      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);
+      const anchor=document.createElement("a");anchor.href=url;anchor.download="teacher-workspace-report.csv";document.body.append(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+    });
+    teacherWorkspacePanel.append(exportButton);
+    return;
+  }
+  const types=teacherSectionTypes[index]||[];
+  const selector=document.createElement("div");selector.className="teacher-type-tabs";
+  types.forEach(type=>{
+    const button=teacherButton(teacherTypeName(type),teacherActiveType===type?"teacher-type active":"teacher-type",()=>{teacherActiveType=type;renderTeacherModule(index);});
+    selector.append(button);
+  });
+  if(!types.includes(teacherActiveType)) teacherActiveType=types[0];
+  selector.querySelectorAll("button").forEach((button,i)=>button.classList.toggle("active",types[i]===teacherActiveType));
+  teacherWorkspacePanel.append(selector);
+  const currentType=teacherActiveType;
+  if(currentType==="students") teacherWorkspacePanel.append(teacherText("p","teacher-hint",teacherTr("A roster entry has no login until you choose Create login. The temporary password is shown once.","roster")));
+  const records=teacherRecords.filter(item=>item.type===currentType&&item.status!=="archived");
+  const toolbar=document.createElement("div");toolbar.className="teacher-list-toolbar";
+  const search=document.createElement("input");search.type="search";search.placeholder=teacherTr("Search records","search");search.setAttribute("aria-label",teacherTr("Search records","search"));
+  const add=teacherButton("+ "+teacherTr("Add","add")+" "+teacherTypeName(currentType),"teacher-action primary",()=>renderTeacherForm(currentType,index));
+  toolbar.append(search,add);teacherWorkspacePanel.append(toolbar);
+  const list=document.createElement("div");list.className="teacher-record-list";
+  const drawList=(query="")=>{
+    list.replaceChildren();
+    const filtered=records.filter(record=>JSON.stringify(record).toLowerCase().includes(query.toLowerCase()));
+    if(!filtered.length){list.append(teacherText("p","teacher-empty",query?teacherTr("No matching records.","noMatch"):teacherTr("No records yet. Use the button above to add your first one.","empty")));return;}
+    filtered.sort((a,b)=>(b.updatedAt||"").localeCompare(a.updatedAt||""));
+    filtered.forEach(record=>{
+      const card=document.createElement("article");card.className="teacher-record";
+      const name=record.displayName||record.name||record.title||record.prompt||"Untitled record";
+      const meta=[record.subject,record.email,record.date,record.status].filter(Boolean).join(" · ");
+      const info=document.createElement("div");info.append(teacherText("strong","",name),teacherText("small","",meta));
+      const actions=document.createElement("div");actions.className="teacher-record-actions";
+      actions.append(teacherButton(teacherTr("Edit","edit"),"teacher-small",()=>renderTeacherForm(currentType,index,record)));
+      if(currentType==="students") {
+        if(record.authUid) actions.append(teacherText("small","teacher-linked-login",teacherTr("Login linked","linkedLogin")));
+        else actions.append(teacherButton(lang==="ar"?"إنشاء حساب دخول":"Create login","teacher-small primary",async()=>{
+          if(!record.email){showMessage(lang==="ar"?"أضف بريد الطالب أولًا.":"Add a student email address first.");return;}
+          if(!confirm(teacherTr("Create a login account for this student? A temporary password will be shown once.","createLoginConfirm")))return;
+          try{const result=await call("createTeacherStudentAccount")({studentId:record.id});teacherIssuedCredentials={email:result.data.email,password:result.data.temporaryPassword};const refreshed=await call("getTeacherWorkspace")();teacherRecords=refreshed.data.records||[];renderTeacherModule(index);}
+          catch(error){showMessage(error.message||"Could not create the student login.");}
+        }));
+      }
+      actions.append(teacherButton(teacherTr("Archive","archive"),"teacher-small danger",async()=>{
+        if(!confirm(teacherTr("Archive this record? It will be hidden from the active workspace.","archiveConfirm")))return;
+        try{await call("archiveTeacherResource")({type:currentType,id:record.id});teacherRecords=teacherRecords.filter(item=>item.id!==record.id||item.type!==currentType);renderTeacherModule(index);showMessage(teacherTr("Record archived.","archived"),"success");}
+        catch(error){showMessage(error.message||"Could not archive this record.");}
+      }));
+      card.append(info,actions);list.append(card);
+    });
+  };
+  search.addEventListener("input",()=>drawList(search.value));drawList();
+  teacherWorkspacePanel.append(list);
+}
+function renderTeacherForm(type,index,record=null) {
+  const fields=teacherFieldDefs[type]||[];
+  teacherWorkspacePanel.replaceChildren();
+  const form=document.createElement("form");form.className="teacher-form";
+  form.append(teacherText("h4","teacher-subheading",record?teacherTr("Edit record","edit")+" · "+teacherTypeName(type):teacherTr("Add record","add")+" · "+teacherTypeName(type)));
+  const controls={};
+  fields.forEach(([key,label,kind,required])=>{
+    const wrap=document.createElement("label");wrap.className="teacher-field";wrap.append(teacherText("span","",(lang==="ar"?(teacherArabic.fields[key]||label):label)+(required?" *":"")));
+    let input;
+    if(kind.startsWith("ref:")){
+      input=document.createElement("select");const target=kind.slice(4);input.append(new Option(teacherTr("Select…","select"),""));
+      teacherRecords.filter(item=>item.type===target&&item.status!=="archived").forEach(item=>input.append(new Option(item.displayName||item.name||item.title||item.id,item.id)));
+    } else if(kind.startsWith("select:")){
+      input=document.createElement("select");input.append(new Option(teacherTr("Select…","select"),""));kind.slice(7).split(",").forEach(value=>{const ar={Easy:"سهل",Medium:"متوسط",Hard:"صعب",present:"حاضر",absent:"غائب",late:"متأخر",excused:"بعذر"};input.append(new Option(lang==="ar"?(ar[value]||value):value,value));});
+    } else if(kind==="status"){
+      input=document.createElement("select");[["draft",teacherTr("Draft","draft")],["active",teacherTr("Active","active")],["published",teacherTr("Published","published")],["archived",teacherTr("Archived","archivedStatus")]].forEach(([v,l])=>input.append(new Option(l,v)));
+    } else if(kind==="textarea"){
+      input=document.createElement("textarea");input.rows=3;
+      if(key==="options") input.placeholder="Choice A\nChoice B\nChoice C\nChoice D";
+    } else if(kind==="checkbox"){
+      input=document.createElement("input");input.type="checkbox";input.checked=record?.[key]===true;
+    } else {input=document.createElement("input");input.type=kind;}
+    input.name=key;input.required=!!required;
+    const old=record?.[key];
+    if(kind==="checkbox") input.checked=old===true;
+    else if(old!==undefined&&old!==null) input.value=key==="options"&&Array.isArray(old)?old.join("\n"):String(old);
+    controls[key]=input;wrap.append(input);form.append(wrap);
+  });
+  const actions=document.createElement("div");actions.className="teacher-form-actions";
+  const save=teacherButton(record?teacherTr("Save changes","saveChanges"):teacherTr("Save record","save"),"teacher-action primary",()=>{});
+  save.type="submit";
+  const cancel=teacherButton(teacherTr("Cancel","cancel"),"teacher-small",()=>renderTeacherModule(index));
+  actions.append(save,cancel);form.append(actions);
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();save.disabled=true;
+    const values={};
+    Object.entries(controls).forEach(([key,input])=>{
+      if(input.type==="checkbox") values[key]=input.checked;
+      else if(input.tagName==="TEXTAREA"&&key==="options") values[key]=input.value.split("\n").map(v=>v.trim()).filter(Boolean);
+      else if(input.type==="number") values[key]=input.value===""?null:Number(input.value);
+      else values[key]=input.value.trim();
+    });
+    try{
+      await call("saveTeacherResource")({type,id:record?.id||undefined,fields:values});
+      const response=await call("getTeacherWorkspace")();teacherRecords=response.data.records||[];
+      showMessage(teacherTr("Saved successfully.","saved"),"success");renderTeacherModule(index);
+    }catch(error){showMessage(error.message||"Could not save this record.");}
+    finally{save.disabled=false;}
+  });
+  teacherWorkspacePanel.append(form);
+}
 async function refreshAccount(user) {
   currentUser = user;
   accountStatus.textContent = copy[lang].loading;
   requestForm.hidden = true;
   teacherPanel.hidden = true;
+  featureRequestForm.hidden = true;
+  bugReportForm.hidden = true;
+  roleDashboard.hidden = true;
   try {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
-    accountStatus.textContent = statusLabel(data.status);
+    accountStatus.textContent = statusLabel(data.status) + (data.platformControls?.maintenance ? "\n\n" + (data.platformControls.maintenanceMessage || "The platform is undergoing scheduled maintenance.") : "");
+    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; bugReportForm.hidden = data.role === "developer"; if(data.role==="teacher"||data.role==="mainTeacher") await loadTeacherWorkspace(); }
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
       teacherPanel.hidden = false;
@@ -119,6 +436,10 @@ async function refreshAccount(user) {
   } catch (error) {
     accountStatus.textContent = copy[lang].statusError;
     console.error("Account status lookup failed:", error);
+    if (error.code === "functions/permission-denied" && String(error.message || "").includes("temporarily restricted")) {
+      await signOut(auth);
+      showMessage("Portal access is temporarily restricted by the Developer.", "error");
+    }
   }
 }
 
@@ -158,7 +479,7 @@ async function loadPendingRequests() {
   } catch (error) {
     pendingList.replaceChildren();
     const failed = document.createElement("p");
-    failed.textContent = copy[lang].reviewFailed;
+    failed.textContent = (lang === "ar" ? "تعذر تحميل طلبات المراجعة: " : "Could not load review requests: ") + (error.message || copy[lang].reviewFailed);
     pendingList.append(failed);
     console.error("Pending request lookup failed:", error);
   }
@@ -203,6 +524,44 @@ document.getElementById("resetButton").addEventListener("click", async () => {
   }
 });
 
+bugReportForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser) return;
+  bugReportButton.disabled = true;
+  try {
+    await call("submitDeveloperBugReport")({
+      title: document.getElementById("bugTitle").value.trim(),
+      details: document.getElementById("bugDetails").value.trim(),
+      severity: document.getElementById("bugSeverity").value
+    });
+    showMessage("Your bug report was submitted.", "success");
+    bugReportForm.reset();
+  } catch (error) {
+    showMessage(error.message || "Could not submit the bug report.");
+  } finally {
+    bugReportButton.disabled = false;
+  }
+});
+
+featureRequestForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser) return;
+  featureRequestButton.disabled = true;
+  try {
+    await call("submitDeveloperFeatureRequest")({
+      title: document.getElementById("featureRequestTitle").value.trim(),
+      details: document.getElementById("featureRequestDetails").value.trim(),
+      clientId: document.getElementById("featureRequestClient").value.trim()
+    });
+    showMessage("Your feature request was sent to the Developer for review.", "success");
+    featureRequestForm.reset();
+  } catch (error) {
+    showMessage(error.message || "Could not submit the feature request.");
+  } finally {
+    featureRequestButton.disabled = false;
+  }
+});
+
 requestForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!currentUser) return;
@@ -228,6 +587,12 @@ document.getElementById("signoutButton").addEventListener("click", async () => {
 
 onAuthStateChanged(auth, async user => {
   if (user) {
+    const token = await user.getIdTokenResult(true);
+    await call("recordAuthenticatedLogin")({ userAgent: navigator.userAgent });
+    if (token.claims.role === "developer" && token.claims.accountStatus === "active") {
+      window.location.replace("/developer.html");
+      return;
+    }
     currentUser = user;
     loginArea.style.display = "none";
     signedArea.classList.add("show");
@@ -239,6 +604,8 @@ onAuthStateChanged(auth, async user => {
     signedArea.classList.remove("show");
     requestForm.hidden = true;
     teacherPanel.hidden = true;
+    featureRequestForm.hidden = true;
+    bugReportForm.hidden = true;
   }
 });
 
