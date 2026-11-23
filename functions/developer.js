@@ -361,8 +361,46 @@ exports.createManagedAccount = onCall(async (request) => {
     if (error.code === "auth/email-already-exists") throw new HttpsError("already-exists", "An account with this email already exists.");
     throw error;
   }
-  await audit(actor, "developer_managed_account_created", user.uid, { email, role });
   return { uid: user.uid, email, role, passwordResetLink: user.passwordResetLink };
+});
+
+exports.listManagedAccounts = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  const role = request.auth.token.role;
+  if (!["developer", "superAdmin"].includes(role) || request.auth.token.accountStatus !== "active") {
+    throw new HttpsError("permission-denied", "An active Developer or Administrator account is required.");
+  }
+  const page = await getAuth().listUsers(100);
+  const users = page.users.filter((user) => {
+    const targetRole = user.customClaims?.role || "unassigned";
+    return role === "developer" || ["student", "parent", "teacher", "assistant"].includes(targetRole);
+  }).map((user) => ({
+    uid: user.uid, email: user.email || "", displayName: user.displayName || "",
+    role: user.customClaims?.role || "unassigned", disabled: user.disabled
+  }));
+  return { users, nextPageToken: page.pageToken || null };
+});
+
+exports.setManagedAccountStatus = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  const actor = request.auth, actorRole = actor.token.role;
+  if (actorRole !== "developer" || actor.token.accountStatus !== "active") {
+    throw new HttpsError("permission-denied", "Only the active Developer can deactivate accounts.");
+  }
+  const uid = clean(request.data?.uid, 128);
+  const disabled = request.data?.disabled;
+  if (!uid || uid === actor.uid || typeof disabled !== "boolean") {
+    throw new HttpsError("invalid-argument", "Choose another account and a valid active/disabled state.");
+  }
+  const target = await getAuth().getUser(uid);
+  const claims = target.customClaims || {};
+  await getAuth().updateUser(uid, { disabled });
+  await getAuth().setCustomUserClaims(uid, { ...claims, accountStatus: disabled ? "disabled" : "active" });
+  await db.doc("userProfiles/" + uid).set({
+    status: disabled ? "disabled" : "active", updatedAt: FieldValue.serverTimestamp(), updatedBy: actor.uid
+  }, { merge: true });
+  await audit(actor, disabled ? "managed_account_deactivated" : "managed_account_reactivated", uid, { email: target.email || null, role: claims.role || null });
+  return { success: true, disabled };
 });
 
 exports.getDeveloperUserStatistics = onCall(async (request) => {
