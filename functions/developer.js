@@ -215,7 +215,11 @@ exports.saveDeveloperFeatureTemplate = onCall(async (request) => {
   const clientId = clean(request.data?.clientId, 80);
   if (name.length < 2) throw new HttpsError("invalid-argument", "Template name is required.");
   const snapshot = await db.collection("developerFeatureSettings").get();
-  const features = Object.fromEntries(snapshot.docs.map((doc) => [doc.id, doc.data()]));
+  const features = Object.fromEntries(snapshot.docs.map((doc) => {
+    const stored = doc.data();
+    const clientConfig = clientId ? stored.clientOverrides?.[clientId] : null;
+    return [doc.id, clientConfig ? { enabled: clientConfig.enabled, visibility: clientConfig.visibility, roleAccess: clientConfig.roleAccess || {} } : stored];
+  }));
   const ref = await db.collection("developerFeatureTemplates").add({
     name, clientId: clientId || null, features,
     createdBy: actor.uid, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
