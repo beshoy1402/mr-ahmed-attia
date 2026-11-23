@@ -79,6 +79,25 @@ function requireDeveloper(request) {
 function clean(value, max = 120) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+async function assertFeatureEnabled(featureId, role, clientId = null) {
+  featureById(featureId);
+  const snap = await db.doc("developerFeatureSettings/" + featureId).get();
+  const config = snap.exists ? snap.data() : {};
+  if (config.enabled === false || config.visibility === "hidden") {
+    throw new HttpsError("unavailable", "This capability is currently disabled.");
+  }
+  if (config.roleAccess?.[role] === false) {
+    throw new HttpsError("permission-denied", "Your role cannot use this capability.");
+  }
+  const client = clientId && config.clientOverrides?.[clientId];
+  if (client && (client.enabled === false || client.visibility === "hidden" || client.roleAccess?.[role] === false)) {
+    throw new HttpsError("unavailable", "This capability is not enabled for this client.");
+  }
+  const schedule = config.schedule || {};
+  const now = Date.now();
+  if (schedule.startsAt && now < Date.parse(schedule.startsAt)) throw new HttpsError("unavailable", "This capability is not active yet.");
+  if (schedule.endsAt && now >= Date.parse(schedule.endsAt)) throw new HttpsError("unavailable", "This capability's scheduled access has ended.");
+}
 function featureById(id) {
   const feature = FEATURES.find((item) => item.id === id);
   if (!feature) throw new HttpsError("invalid-argument", "Unknown feature ID.");
@@ -253,6 +272,7 @@ exports.copyDeveloperClientConfig = onCall(async (request) => {
 
 exports.submitDeveloperFeatureRequest = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  await assertFeatureEnabled("client.requests", request.auth.token.role || "student", clean(request.data?.clientId, 80) || null);
   const title = clean(request.data?.title, 100);
   const details = clean(request.data?.details, 1000);
   if (title.length < 3) throw new HttpsError("invalid-argument", "Request title is required.");
@@ -308,6 +328,8 @@ exports.createManagedAccount = onCall(async (request) => {
   if (!(actorRole === "developer" ? allowedForDeveloper : allowedForAdmin).includes(role)) {
     throw new HttpsError("permission-denied", "Your role cannot create this account type.");
   }
+  await assertFeatureEnabled("security.admin-accounts", actorRole);
+  if (role === "superAdmin") await assertFeatureEnabled("security.create-admin", actorRole);
   const email = clean(request.data?.email, 254).toLowerCase();
   const displayName = clean(request.data?.displayName, 100);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || displayName.length < 2) {
