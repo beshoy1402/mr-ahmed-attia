@@ -15,13 +15,16 @@
 .intro h1{font-size:clamp(34px,4vw,48px);line-height:1.08;letter-spacing:-.055em;margin:60px 0 18px;max-width:440px}.intro h1 span{color:var(--orange)}.intro p{color:#c3cee0;line-height:1.8;font-size:14px;max-width:410px}.pill{display:inline-flex;align-items:center;gap:8px;color:#f7d5a9;background:#ffffff12;border:1px solid #ffffff20;border-radius:99px;padding:9px 13px;font-size:11px;font-weight:750;width:max-content}.intro-foot{font-size:11px;color:#9fb0ca;line-height:1.7}
 .panel{padding:48px 38px;display:flex;flex-direction:column;justify-content:center}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:35px}.top a{font-size:12px;color:var(--muted);text-decoration:none}.lang{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 12px;font-weight:750;color:var(--navy);cursor:pointer}
 h2{font-size:27px;letter-spacing:-.04em;color:var(--navy);margin:0 0 8px}.sub{font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 28px}
-label{display:block;font-size:12px;font-weight:750;color:var(--navy);margin:17px 0 8px}input{width:100%;padding:14px 15px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:14px;outline:none;transition:.15s}input:focus{border-color:var(--blue);box-shadow:0 0 0 4px #315bd61a}
+label{display:block;font-size:12px;font-weight:750;color:var(--navy);margin:17px 0 8px}input,select{width:100%;padding:14px 15px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:14px;outline:none;background:white}input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 4px #315bd61a}
 button.submit{width:100%;margin-top:22px;border:0;border-radius:12px;padding:15px;background:var(--blue);color:white;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;min-height:49px}button:disabled{opacity:.6;cursor:wait}
 .links{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:16px}.link{border:0;background:none;color:var(--blue);font:750 12px inherit;padding:4px 0;cursor:pointer}.notice{font-size:11px;color:var(--muted);line-height:1.7;margin-top:25px;padding:13px 14px;border-radius:12px;background:#f5f7fc}
 .message{display:none;margin-top:16px;padding:12px 14px;border-radius:12px;font-size:12px;line-height:1.6}.message.show{display:block}.message.error{background:#fff0ef;color:#a52d26}.message.success{background:#eaf8f1;color:#176b49}
 .signed{display:none;border:1px solid #ccebdc;background:#f2fbf6;padding:18px;border-radius:16px;margin-top:18px}.signed.show{display:block}.signed strong{display:block;color:#176b49;margin-bottom:6px}.signed p{font-size:12px;line-height:1.7;color:#456b5a}.signout{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 13px;font-weight:750;color:var(--navy);cursor:pointer}
+.account-status{font-size:12px;line-height:1.7;color:#46556e;background:#f4f6fb;border:1px solid var(--line);border-radius:12px;padding:13px;margin:14px 0}
+.workflow{border:1px solid var(--line);border-radius:15px;padding:16px;margin-top:15px;background:#fff}.workflow h3{font-size:15px;color:var(--navy);margin:0 0 8px}.workflow p{font-size:12px;color:var(--muted);line-height:1.6}
+.workflow button{border:0;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:750;cursor:pointer}.approve-button{background:#e8f7ef;color:#176b49}.reject-button{background:#fff0ef;color:#a52d26}.request-card{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.request-card strong{font-size:12px}.request-card p{margin:4px 0 0;font-size:11px}.request-actions{display:flex;gap:6px;flex-wrap:wrap}
 @media(max-width:760px){body{padding:12px}.shell{grid-template-columns:1fr;border-radius:20px;max-width:470px}.intro{min-height:auto;padding:25px 25px 27px}.intro h1{font-size:30px;margin:28px 0 10px}.intro p{font-size:12px;margin:0 0 18px}.intro-foot{display:none}.panel{padding:28px 24px 32px}.top{margin-bottom:26px}}
-[dir=rtl]body{text-align:right}[dir=rtl] .links{flex-direction:row-reverse}
+[dir=rtl]body{text-align:right}[dir=rtl] .links{flex-direction:row-reverse}[dir=rtl] .request-card{flex-direction:row-reverse}
 </style>
 </head>
 <body>
@@ -41,7 +44,16 @@ button.submit{width:100%;margin-top:22px;border:0;border-radius:12px;padding:15p
   </form>
   <div class="links"><button class="link" id="resetButton" type="button" data-en="Forgot password?" data-ar="نسيت كلمة المرور؟">Forgot password?</button><span style="font-size:11px;color:#8993a5" data-en="Account creation by teacher" data-ar="إنشاء الحسابات عن طريق المدرس">Account creation by teacher</span></div>
   <div class="notice" data-en="New student? Ask your teacher for an account. Self-registration is disabled so that student access can be reviewed and approved." data-ar="طالب جديد؟ اطلب من المدرس إنشاء حساب لك. التسجيل الذاتي غير متاح حتى تتم مراجعة الحسابات والموافقة عليها.">New student? Ask your teacher for an account. Self-registration is disabled so that student access can be reviewed and approved.</div></div>
-  <div id="signedArea" class="signed"><strong data-en="You are signed in." data-ar="تم تسجيل الدخول.">You are signed in.</strong><p id="signedText"></p><button class="signout" id="signoutButton" type="button" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button></div>
+  <div id="signedArea" class="signed"><strong data-en="You are signed in." data-ar="تم تسجيل الدخول.">You are signed in.</strong><p id="signedText"></p><div id="accountStatus" class="account-status" aria-live="polite"></div>
+    <form id="requestAccessForm" class="workflow" hidden>
+      <h3 data-en="Request account access" data-ar="طلب صلاحية حساب">Request account access</h3>
+      <label for="requestName" data-en="Your full name" data-ar="اسمك بالكامل">Your full name</label><input id="requestName" maxlength="80" required>
+      <label for="requestedRole" data-en="I am a" data-ar="أنا">I am a</label><select id="requestedRole"><option value="student" data-en="Student" data-ar="طالب">Student</option><option value="parent" data-en="Parent" data-ar="ولي أمر">Parent</option></select>
+      <button class="submit" id="requestAccessButton" type="submit" data-en="Submit access request" data-ar="إرسال طلب الصلاحية">Submit access request</button>
+    </form>
+    <section id="teacherPanel" class="workflow" hidden><h3 data-en="Teacher review" data-ar="مراجعة المدرس">Teacher review</h3><div id="pendingList"></div></section>
+    <button class="signout" id="signoutButton" type="button" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
+  </div>
   <div id="message" class="message" role="status" aria-live="polite"></div>
 </section>
 </div>
