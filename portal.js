@@ -179,6 +179,7 @@ function renderDashboard(role) {
       ? "هذا القسم مُجهّز ضمن تصميم لوحة التحكم، لكن وظائفه وبياناته لن تُفتح قبل تنفيذ الصلاحيات الآمنة واختبارها."
       : "This section is included in the dashboard design. Its tools and data will remain unavailable until the required secure permissions are implemented and tested.";
     roleDetail.hidden = false;
+    roleDetail.classList.add("active");
   };
   config.modules.forEach(([title, description], index) => {
     const navButton = document.createElement("button");
