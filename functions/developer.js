@@ -126,21 +126,24 @@ exports.updateDeveloperFeature = onCall(async (request) => {
   const id = clean(request.data?.featureId, 100);
   const feature = featureById(id);
   const input = request.data?.config || {};
-  const allowed = ["enabled", "visibility", "roleAccess", "clientOverrides", "schedule", "subfeatures"];
   const config = {};
-  if (typeof input.enabled === "boolean") config.enabled = input.enabled;
-  if (input.visibility && ["visible", "hidden", "unavailable"].includes(input.visibility)) config.visibility = input.visibility;
-  if (input.roleAccess && typeof input.roleAccess === "object" && !Array.isArray(input.roleAccess)) {
-    config.roleAccess = Object.fromEntries(ROLES.map((role) => [role, input.roleAccess[role] !== false]));
-  }
-  if (input.clientId) {
-    const clientId = clean(input.clientId, 80);
+  const clientId = clean(input.clientId, 80);
+  if (!clientId) {
+    if (typeof input.enabled === "boolean") config.enabled = input.enabled;
+    if (input.visibility && ["visible", "hidden", "unavailable"].includes(input.visibility)) config.visibility = input.visibility;
+    if (input.roleAccess && typeof input.roleAccess === "object" && !Array.isArray(input.roleAccess)) {
+      config.roleAccess = Object.fromEntries(ROLES.map((role) => [role, input.roleAccess[role] !== false]));
+    }
+  } else {
     if (!/^[a-zA-Z0-9_-]+$/.test(clientId)) throw new HttpsError("invalid-argument", "Invalid client ID.");
     const current = (await db.doc("developerFeatureSettings/" + id).get()).data() || {};
     const overrides = { ...(current.clientOverrides || {}) };
     overrides[clientId] = {
       enabled: typeof input.clientEnabled === "boolean" ? input.clientEnabled : true,
-      visibility: ["visible", "hidden", "unavailable"].includes(input.clientVisibility) ? input.clientVisibility : "visible"
+      visibility: ["visible", "hidden", "unavailable"].includes(input.clientVisibility) ? input.clientVisibility : "visible",
+      roleAccess: input.roleAccess && typeof input.roleAccess === "object"
+        ? Object.fromEntries(ROLES.map((role) => [role, input.roleAccess[role] !== false]))
+        : (overrides[clientId]?.roleAccess || {})
     };
     config.clientOverrides = overrides;
   }
@@ -156,9 +159,18 @@ exports.updateDeveloperFeature = onCall(async (request) => {
     config.subfeatures = Object.fromEntries(Object.entries(input.subfeatures).slice(0, 50).map(([key, value]) => [clean(key, 80), value === true]));
   }
   if (!Object.keys(config).length) throw new HttpsError("invalid-argument", "No valid feature settings were provided.");
+  if (config.enabled === false) {
+    const dependents = FEATURES.filter((candidate) => candidate.dependencies.includes(id));
+    const activeDependents = [];
+    for (const dependent of dependents) {
+      const snap = await db.doc("developerFeatureSettings/" + dependent.id).get();
+      if (!snap.exists || snap.get("enabled") !== false) activeDependents.push(dependent.name);
+    }
+    if (activeDependents.length) throw new HttpsError("failed-precondition", "Disable dependent features first: " + activeDependents.join(", "));
+  }
   const ref = db.doc("developerFeatureSettings/" + id);
   await ref.set({ ...config, featureId: id, featureName: feature.name, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  await audit(actor, "developer_feature_updated", id, config);
+  await audit(actor, "developer_feature_updated", id, { ...config, clientId: clientId || null });
   return { success: true };
 });
 
