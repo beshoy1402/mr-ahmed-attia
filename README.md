@@ -2,12 +2,14 @@
 
 A production-oriented Learning Management System for SAT Reading & Writing, designed for students, parents, teachers, assistants, administrators, education centers, support staff, accountants, and developers.
 
-## Current repository state
+## Current release
 
-- Existing public website: `index.html` (legacy static landing page).
-- Production foundation branch: `production-foundation`.
-- Backend: not yet connected. Firebase project ownership/configuration and environment values must be verified before enabling real authentication or data operations.
-- Deployment: no matching Vercel project was found during the initial connected-account inspection.
+- Public website: [Open the live site](https://mr-ahmed-attia-99m5mf8og-beshoys-projects-3aeeadba.vercel.app).
+- Git branch: `production-foundation`.
+- Public site: responsive SAT Reading & Writing landing page with English/Arabic language switching, SAT domain overview, practice information, FAQ, and mobile navigation.
+- Backend: Firebase has not yet been connected or verified. Real student authentication, course data, payments, exams, and AI services are not live.
+- Vercel: project `mr-ahmed-attia`; deployment verified as `READY` for the public landing page.
+- No custom domain is attached yet.
 
 ## Product scope
 
@@ -22,12 +24,21 @@ See:
 
 ## Important production rule
 
-Do not present static UI, mock data, local-only state, or placeholder integrations as working production functionality. A feature is production-ready only after its backend, permissions, validation, persistence, failure handling, and tests are implemented.
+The current live release is the public marketing website only. It is not the complete LMS. Do not present static UI, mock data, local-only state, or placeholder integrations as working production functionality. A feature is production-ready only after its backend, permissions, validation, persistence, failure handling, and tests are implemented.
 
 ## Local development
 
-The repository currently contains a static HTML landing page. Until the application framework and Firebase project are verified, preview it with any static web server. Do not add secrets to source control.
+The current public page is a static HTML file. Do not add secrets to source control. Backend and application framework decisions must follow the documented architecture and be verified before implementation.
 
 ## Release status
 
-This branch establishes the documented production baseline. It is not a claim that the complete LMS, Firebase backend, payment processing, AI providers, or third-party integrations are already live.
+- [x] Production foundation branch created.
+- [x] Product requirements, architecture, security, deployment, and Claude Code instructions documented.
+- [x] Public SAT Reading & Writing website refreshed and deployed.
+- [ ] Firebase environments and backend.
+- [ ] Authentication and role-scoped permissions.
+- [ ] Courses, enrollments, question bank, and imports.
+- [ ] Exams, grading, homework, attendance.
+- [ ] AI tutor, teacher assistant, and knowledge retrieval.
+- [ ] Payments, messaging, notifications, and integrations.
+- [ ] Analytics, backups, and developer operations dashboard.
