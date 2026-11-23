@@ -81,16 +81,20 @@ function clean(value, max = 120) {
 }
 async function assertFeatureEnabled(featureId, role, clientId = null) {
   featureById(featureId);
-  const snap = await db.doc("developerFeatureSettings/" + featureId).get();
+  const [snap, globalSnap] = await Promise.all([db.doc("developerFeatureSettings/" + featureId).get(), db.doc("developerSettings/global").get()]);
   const config = snap.exists ? snap.data() : {};
-  if (config.enabled === false || config.visibility === "hidden") {
+  const globalSettings = globalSnap.exists ? globalSnap.data() : {};
+  if (globalSettings.emergencyMode && !["dev.separate-dashboard", "security.developer-only"].includes(featureId)) {
+    throw new HttpsError("unavailable", "The platform is temporarily in emergency mode.");
+  }
+  if (config.enabled === false || config.visibility === "hidden" || config.visibility === "unavailable") {
     throw new HttpsError("unavailable", "This capability is currently disabled.");
   }
   if (config.roleAccess?.[role] === false) {
     throw new HttpsError("permission-denied", "Your role cannot use this capability.");
   }
   const client = clientId && config.clientOverrides?.[clientId];
-  if (client && (client.enabled === false || client.visibility === "hidden" || client.roleAccess?.[role] === false)) {
+  if (client && (client.enabled === false || client.visibility === "hidden" || client.visibility === "unavailable" || client.roleAccess?.[role] === false)) {
     throw new HttpsError("unavailable", "This capability is not enabled for this client.");
   }
   const schedule = config.schedule || {};
@@ -277,6 +281,8 @@ exports.copyDeveloperClientConfig = onCall(async (request) => {
 exports.submitDeveloperFeatureRequest = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
   await assertFeatureEnabled("client.requests", request.auth.token.role || "student", clean(request.data?.clientId, 80) || null);
+  const globalSnap = await db.doc("developerSettings/global").get();
+  if (globalSnap.exists && (globalSnap.get("readOnly") || globalSnap.get("emergencyMode"))) throw new HttpsError("failed-precondition", "Feature requests are paused by global safety controls.");
   const title = clean(request.data?.title, 100);
   const details = clean(request.data?.details, 1000);
   if (title.length < 3) throw new HttpsError("invalid-argument", "Request title is required.");
