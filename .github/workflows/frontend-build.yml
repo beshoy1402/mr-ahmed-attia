@@ -3,7 +3,7 @@ on:
   push:
     branches: [react-portfolio-redesign]
   pull_request:
-    branches: [react-portfolio-redesign]
+    branches: [production-foundation]
 permissions:
   contents: read
 jobs:
