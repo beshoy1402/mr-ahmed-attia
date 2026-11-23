@@ -145,6 +145,17 @@ function renderDashboard(role) {
     tile.append(heading, detail, lock);
     dashboardModules.append(tile);
   }
+  if (role === "superAdmin") {
+    const tile = document.createElement("a");
+    tile.className = "dashboard-tile";
+    tile.href = "/admin-accounts.html";
+    const heading = document.createElement("strong");
+    heading.textContent = lang === "ar" ? "إدارة الحسابات التعليمية" : "Educational Account Management";
+    const detail = document.createElement("span");
+    detail.textContent = lang === "ar" ? "إنشاء وإدارة حسابات الطلاب وأولياء الأمور والمدرسين والمساعدين." : "Create and manage Student, Parent, Teacher and Assistant accounts.";
+    tile.append(heading, detail);
+    dashboardModules.append(tile);
+  }
   roleDashboard.hidden = false;
 }
 
