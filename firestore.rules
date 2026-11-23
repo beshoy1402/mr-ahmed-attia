@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fail closed. Replace these rules only alongside tested, resource-scoped
+    // authorization for the relevant collections.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
