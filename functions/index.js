@@ -31,6 +31,9 @@ function cleanText(value, max) {
 exports.requestAccountAccess = onCall(async (request) => {
   const auth = requireUser(request);
   const uid = auth.uid;
+  if (auth.token.role) {
+    throw new HttpsError("already-exists", "This account already has an assigned role. Contact the teacher if it needs to change.");
+  }
   if (auth.token.email_verified !== true) {
     throw new HttpsError("failed-precondition", "Verify your email address before requesting account access.");
   }
