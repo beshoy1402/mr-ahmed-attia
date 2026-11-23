@@ -138,7 +138,6 @@ exports.listPendingAccessRequests = onCall(async (request) => {
   requireApprover(request);
   const snapshot = await db.collection("accessRequests")
     .where("status", "==", "pending")
-    .orderBy("createdAt", "asc")
     .limit(50)
     .get();
 
@@ -152,7 +151,7 @@ exports.listPendingAccessRequests = onCall(async (request) => {
         requestedRole: data.requestedRole,
         createdAt: data.createdAt?.toDate?.().toISOString?.() || null
       };
-    })
+    }).sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
   };
 });
 
