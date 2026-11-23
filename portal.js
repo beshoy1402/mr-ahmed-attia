@@ -1,12 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+import { createCallable } from "./api-client.js";
 import { firebaseConfig } from "/firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const functions = getFunctions(app, "us-central1");
-const call = name => httpsCallable(functions, name);
+const call = createCallable(auth);
 const form = document.getElementById("loginForm");
 const loginButton = document.getElementById("loginButton");
 const message = document.getElementById("message");
