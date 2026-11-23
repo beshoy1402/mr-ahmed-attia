@@ -18,6 +18,8 @@ const accountStatus = document.getElementById("accountStatus");
 const requestForm = document.getElementById("requestAccessForm");
 const requestButton = document.getElementById("requestAccessButton");
 const teacherPanel = document.getElementById("teacherPanel");
+const featureRequestForm = document.getElementById("featureRequestForm");
+const featureRequestButton = document.getElementById("featureRequestButton");
 const pendingList = document.getElementById("pendingList");
 const roleDashboard = document.getElementById("roleDashboard");
 const dashboardTitle = document.getElementById("dashboardTitle");
@@ -164,12 +166,13 @@ async function refreshAccount(user) {
   accountStatus.textContent = copy[lang].loading;
   requestForm.hidden = true;
   teacherPanel.hidden = true;
+  featureRequestForm.hidden = true;
   roleDashboard.hidden = true;
   try {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
     accountStatus.textContent = statusLabel(data.status) + (data.platformControls?.maintenance ? "\n\n" + (data.platformControls.maintenanceMessage || "The platform is undergoing scheduled maintenance.") : "");
-    if (data.status === "active" && data.role) renderDashboard(data.role);
+    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; }
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
       teacherPanel.hidden = false;
@@ -262,6 +265,25 @@ document.getElementById("resetButton").addEventListener("click", async () => {
   }
 });
 
+featureRequestForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser) return;
+  featureRequestButton.disabled = true;
+  try {
+    await call("submitDeveloperFeatureRequest")({
+      title: document.getElementById("featureRequestTitle").value.trim(),
+      details: document.getElementById("featureRequestDetails").value.trim(),
+      clientId: document.getElementById("featureRequestClient").value.trim()
+    });
+    showMessage("Your feature request was sent to the Developer for review.", "success");
+    featureRequestForm.reset();
+  } catch (error) {
+    showMessage(error.message || "Could not submit the feature request.");
+  } finally {
+    featureRequestButton.disabled = false;
+  }
+});
+
 requestForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!currentUser) return;
@@ -303,6 +325,7 @@ onAuthStateChanged(auth, async user => {
     signedArea.classList.remove("show");
     requestForm.hidden = true;
     teacherPanel.hidden = true;
+    featureRequestForm.hidden = true;
   }
 });
 
