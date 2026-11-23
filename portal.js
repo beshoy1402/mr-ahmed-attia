@@ -142,7 +142,8 @@ const dashboards = {
 };
 
 function renderDashboard(role) {
-  const config = dashboards[lang][role];
+  const dashboardRole = ["mainTeacher","additionalTeacher"].includes(role) ? "teacher" : role;
+  const config = dashboards[lang][dashboardRole];
   if (!config) { roleDashboard.hidden = true; return; }
   const roleNames = {
     en: {student:"STUDENT SPACE",parent:"PARENT SPACE",teacher:"TEACHER WORKSPACE",assistant:"ASSISTANT WORKSPACE",superAdmin:"ADMINISTRATION"},
@@ -166,10 +167,10 @@ function renderDashboard(role) {
   };
   dashboardTitle.textContent = config.title;
   dashboardDescription.textContent = config.description;
-  roleLabel.textContent = roleNames[lang][role] || "LEARNING PORTAL";
+  roleLabel.textContent = roleNames[lang][dashboardRole] || "LEARNING PORTAL";
   roleUserEmail.textContent = currentUser?.email || auth.currentUser?.email || (lang === "ar" ? "حسابك" : "Your account");
-  roleWelcomeTitle.textContent = welcome[lang][role][0];
-  roleWelcomeText.textContent = welcome[lang][role][1];
+  roleWelcomeTitle.textContent = welcome[lang][dashboardRole][0];
+  roleWelcomeText.textContent = welcome[lang][dashboardRole][1];
   roleWelcomeKicker.textContent = lang === "ar" ? "مرحبًا بك في مساحة عملك" : "WELCOME TO YOUR WORKSPACE";
   roleModulesHeading.textContent = lang === "ar" ? "أقسام مساحة العمل" : "Your workspace";
   dashboardModules.replaceChildren();
@@ -182,7 +183,7 @@ function renderDashboard(role) {
     roleDetailText.textContent = item[1];
     roleDetail.hidden = false;
     roleDetail.classList.add("active");
-    if (role === "teacher") {
+    if (dashboardRole === "teacher") {
       roleDetailStatus.hidden = true;
       renderTeacherModule(index);
     } else {
@@ -204,9 +205,9 @@ function renderDashboard(role) {
     detail.textContent = description;
     const lock = document.createElement("div");
     lock.className = "dashboard-lock";
-    lock.textContent = role === "teacher" ? (lang === "ar" ? "فتح القسم" : "OPEN SECTION") : (lang === "ar" ? "غير مفعّل بعد" : "NOT ENABLED YET");
+    lock.textContent = dashboardRole === "teacher" ? (lang === "ar" ? "فتح القسم" : "OPEN SECTION") : (lang === "ar" ? "غير مفعّل بعد" : "NOT ENABLED YET");
     tile.append(heading,detail,lock);
-    if (role === "teacher") { tile.tabIndex = 0; tile.setAttribute("role","button"); tile.addEventListener("click",()=>showModule(index)); tile.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();showModule(index);}}); }
+    if (dashboardRole === "teacher") { tile.tabIndex = 0; tile.setAttribute("role","button"); tile.addEventListener("click",()=>showModule(index)); tile.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();showModule(index);}}); }
     dashboardModules.append(tile);
   });
   roleQuicklinks.replaceChildren();
@@ -378,7 +379,7 @@ async function refreshAccount(user) {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
     accountStatus.textContent = statusLabel(data.status) + (data.platformControls?.maintenance ? "\n\n" + (data.platformControls.maintenanceMessage || "The platform is undergoing scheduled maintenance.") : "");
-    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; bugReportForm.hidden = data.role === "developer"; if(data.role==="teacher"||data.role==="mainTeacher"||data.role==="superAdmin") await loadTeacherWorkspace(); }
+    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; bugReportForm.hidden = data.role === "developer"; if(data.role==="teacher"||data.role==="mainTeacher") await loadTeacherWorkspace(); }
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
       teacherPanel.hidden = false;
@@ -430,7 +431,7 @@ async function loadPendingRequests() {
   } catch (error) {
     pendingList.replaceChildren();
     const failed = document.createElement("p");
-    failed.textContent = copy[lang].reviewFailed;
+    failed.textContent = (lang === "ar" ? "تعذر تحميل طلبات المراجعة: " : "Could not load review requests: ") + (error.message || copy[lang].reviewFailed);
     pendingList.append(failed);
     console.error("Pending request lookup failed:", error);
   }
