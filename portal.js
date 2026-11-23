@@ -1,9 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 import { firebaseConfig } from "/firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const functions = getFunctions(app, "us-central1");
+const call = name => httpsCallable(functions, name);
 const form = document.getElementById("loginForm");
 const loginButton = document.getElementById("loginButton");
 const message = document.getElementById("message");
@@ -11,7 +14,13 @@ const loginArea = document.getElementById("loginArea");
 const signedArea = document.getElementById("signedArea");
 const signedText = document.getElementById("signedText");
 const emailInput = document.getElementById("email");
+const accountStatus = document.getElementById("accountStatus");
+const requestForm = document.getElementById("requestAccessForm");
+const requestButton = document.getElementById("requestAccessButton");
+const teacherPanel = document.getElementById("teacherPanel");
+const pendingList = document.getElementById("pendingList");
 let lang = "en";
+let currentUser = null;
 
 const copy = {
   en: {
@@ -33,8 +42,15 @@ const copy = {
     resetNeedEmail: "Enter your email address first.",
     resetFailed: "We could not send the reset email. Check the address and try again.",
     signed: "Signed in as ",
-    signedInfo: "Your identity is authenticated. Course access and student records remain unavailable until the teacher approval workflow and secure data permissions are activated.",
-    signOut: "You have been signed out."
+    signedInfo: "Your identity is authenticated. Your permissions are determined separately by teacher approval.",
+    signOut: "You have been signed out.",
+    status: { unrequested:"No access request has been submitted. You can request student or parent access below.", pending:"Your access request is waiting for teacher review. Protected courses and records remain locked.", active:"Your account has been approved. Course access still depends on enrollment and any required payment.", rejected:"Your previous request was not approved. You may submit a new request if needed." },
+    requestSent:"Your request was submitted. The teacher must review it before any learning access is enabled.",
+    requestFailed:"We could not submit the request. Please try again.",
+    loading:"Loading account status…", loadingRequests:"Loading pending requests…", noRequests:"There are no pending access requests.",
+    requestTitle:"Request account access", name:"Your full name", role:"I am a", student:"Student", parent:"Parent", request:"Submit access request",
+    teacherTitle:"Teacher review", approve:"Approve", reject:"Reject", reviewFailed:"Could not complete the review. Refresh and try again.",
+    statusError:"Your sign-in worked, but account status could not be loaded. Protected data remains unavailable."
   },
   ar: {
     signing: "جارٍ تسجيل الدخول…", signIn: "تسجيل الدخول بأمان",
@@ -55,8 +71,15 @@ const copy = {
     resetNeedEmail: "أدخل بريدك الإلكتروني أولًا.",
     resetFailed: "تعذر إرسال رسالة إعادة التعيين. تحقق من البريد وحاول مرة أخرى.",
     signed: "تم تسجيل الدخول باسم ",
-    signedInfo: "تم التحقق من هويتك. ستظل الدورات وسجلات الطلاب غير متاحة حتى يتم تفعيل موافقة المدرس وصلاحيات البيانات الآمنة.",
-    signOut: "تم تسجيل الخروج."
+    signedInfo: "تم التحقق من هويتك. يتم تحديد الصلاحيات بشكل منفصل بعد موافقة المدرس.",
+    signOut: "تم تسجيل الخروج.",
+    status: { unrequested:"لم يتم إرسال طلب صلاحية. يمكنك طلب صلاحية طالب أو ولي أمر أدناه.", pending:"طلبك قيد مراجعة المدرس. تظل الدورات والسجلات المحمية مغلقة.", active:"تمت الموافقة على حسابك. يظل الوصول للدورات مرتبطًا بالتسجيل وأي مدفوعات مطلوبة.", rejected:"لم تتم الموافقة على طلبك السابق. يمكنك إرسال طلب جديد عند الحاجة." },
+    requestSent:"تم إرسال طلبك. يجب على المدرس مراجعته قبل تفعيل أي صلاحية تعليمية.",
+    requestFailed:"تعذر إرسال الطلب. حاول مرة أخرى.",
+    loading:"جارٍ تحميل حالة الحساب…", loadingRequests:"جارٍ تحميل الطلبات المعلقة…", noRequests:"لا توجد طلبات صلاحية معلقة.",
+    requestTitle:"طلب صلاحية حساب", name:"اسمك بالكامل", role:"أنا", student:"طالب", parent:"ولي أمر", request:"إرسال طلب الصلاحية",
+    teacherTitle:"مراجعة المدرس", approve:"موافقة", reject:"رفض", reviewFailed:"تعذرت مراجعة الطلب. حدّث الصفحة وحاول مجددًا.",
+    statusError:"تم تسجيل الدخول، لكن تعذر تحميل حالة الحساب. تظل البيانات المحمية غير متاحة."
   }
 };
 
@@ -67,6 +90,91 @@ function showMessage(text, type = "error") {
 function authError(error) {
   return copy[lang].errors[error.code] || copy[lang].generic;
 }
+function statusLabel(status) {
+  return copy[lang].status[status] || copy[lang].status.unrequested;
+}
+function makeButton(label, className, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+async function refreshAccount(user) {
+  currentUser = user;
+  accountStatus.textContent = copy[lang].loading;
+  requestForm.hidden = true;
+  teacherPanel.hidden = true;
+  try {
+    const result = await call("getMyAccountStatus")();
+    const data = result.data;
+    accountStatus.textContent = statusLabel(data.status);
+    requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
+    if (data.canReviewRequests) {
+      teacherPanel.hidden = false;
+      await loadPendingRequests();
+    }
+  } catch (error) {
+    accountStatus.textContent = copy[lang].statusError;
+    console.error("Account status lookup failed:", error);
+  }
+}
+
+async function loadPendingRequests() {
+  pendingList.replaceChildren();
+  const loading = document.createElement("p");
+  loading.textContent = copy[lang].loadingRequests;
+  pendingList.append(loading);
+  try {
+    const result = await call("listPendingAccessRequests")();
+    pendingList.replaceChildren();
+    const requests = result.data.requests || [];
+    if (!requests.length) {
+      const empty = document.createElement("p");
+      empty.textContent = copy[lang].noRequests;
+      pendingList.append(empty);
+      return;
+    }
+    for (const item of requests) {
+      const card = document.createElement("article");
+      card.className = "request-card";
+      const details = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = item.displayName || item.email || item.uid;
+      const meta = document.createElement("p");
+      meta.textContent = `${item.email || "No email"} · ${item.requestedRole}`;
+      details.append(title, meta);
+      const actions = document.createElement("div");
+      actions.className = "request-actions";
+      actions.append(
+        makeButton(copy[lang].approve, "approve-button", () => reviewRequest(item.uid, "approve")),
+        makeButton(copy[lang].reject, "reject-button", () => reviewRequest(item.uid, "reject"))
+      );
+      card.append(details, actions);
+      pendingList.append(card);
+    }
+  } catch (error) {
+    pendingList.replaceChildren();
+    const failed = document.createElement("p");
+    failed.textContent = copy[lang].reviewFailed;
+    pendingList.append(failed);
+    console.error("Pending request lookup failed:", error);
+  }
+}
+
+async function reviewRequest(uid, decision) {
+  try {
+    await call("reviewAccessRequest")({ uid, decision });
+    showMessage(decision === "approve" ? "Access request approved." : "Access request rejected.", "success");
+    await loadPendingRequests();
+  } catch (error) {
+    console.error("Access review failed:", error);
+    showMessage(copy[lang].reviewFailed);
+  }
+}
+
 await setPersistence(auth, browserLocalPersistence);
 
 form.addEventListener("submit", async event => {
@@ -95,19 +203,42 @@ document.getElementById("resetButton").addEventListener("click", async () => {
   }
 });
 
+requestForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser) return;
+  requestButton.disabled = true;
+  try {
+    await call("requestAccountAccess")({
+      displayName: document.getElementById("requestName").value.trim(),
+      requestedRole: document.getElementById("requestedRole").value
+    });
+    showMessage(copy[lang].requestSent, "success");
+    await refreshAccount(currentUser);
+  } catch (error) {
+    showMessage(error.message || copy[lang].requestFailed);
+  } finally {
+    requestButton.disabled = false;
+  }
+});
+
 document.getElementById("signoutButton").addEventListener("click", async () => {
   await signOut(auth);
   showMessage(copy[lang].signOut, "success");
 });
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   if (user) {
+    currentUser = user;
     loginArea.style.display = "none";
     signedArea.classList.add("show");
     signedText.textContent = copy[lang].signed + (user.email || "account") + ". " + copy[lang].signedInfo;
+    await refreshAccount(user);
   } else {
+    currentUser = null;
     loginArea.style.display = "block";
     signedArea.classList.remove("show");
+    requestForm.hidden = true;
+    teacherPanel.hidden = true;
   }
 });
 
@@ -118,5 +249,6 @@ function setLanguage(next) {
   document.querySelectorAll("[data-en][data-ar]").forEach(el => { el.innerHTML = el.dataset[next]; });
   document.getElementById("lang").textContent = next === "en" ? "عربي" : "English";
   loginButton.textContent = copy[lang].signIn;
+  if (currentUser) refreshAccount(currentUser);
 }
 document.getElementById("lang").addEventListener("click", () => setLanguage(lang === "en" ? "ar" : "en"));
