@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Fail closed. Private course files, submissions, imports, and reports
+    // must receive explicit owner/role/scope checks before access is granted.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
