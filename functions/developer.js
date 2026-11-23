@@ -296,6 +296,9 @@ exports.createManagedAccount = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
   const actor = request.auth;
   const actorRole = actor.token.role;
+  const systemSnap = await db.doc("developerSettings/global").get();
+  const systemSettings = systemSnap.exists ? systemSnap.data() : {};
+  if (systemSettings.readOnly || systemSettings.emergencyMode) throw new HttpsError("failed-precondition", "Account creation is paused by global safety controls.");
   if (!["developer", "superAdmin"].includes(actorRole) || actor.token.accountStatus !== "active") {
     throw new HttpsError("permission-denied", "An active Developer or Administrator account is required.");
   }
@@ -314,6 +317,7 @@ exports.createManagedAccount = onCall(async (request) => {
   try {
     user = await getAuth().createUser({ email, displayName, disabled: false, emailVerified: false });
     await getAuth().setCustomUserClaims(user.uid, { role, accountStatus: "active" });
+    const passwordResetLink = await getAuth().generatePasswordResetLink(email);
     const batch = db.batch();
     const now = FieldValue.serverTimestamp();
     batch.set(db.doc("userProfiles/" + user.uid), {
@@ -325,14 +329,14 @@ exports.createManagedAccount = onCall(async (request) => {
       targetUid: user.uid, targetEmail: email, assignedRole: role, createdAt: now
     });
     await batch.commit();
+    user.passwordResetLink = passwordResetLink;
   } catch (error) {
     if (user?.uid) await getAuth().deleteUser(user.uid).catch(() => {});
     if (error.code === "auth/email-already-exists") throw new HttpsError("already-exists", "An account with this email already exists.");
     throw error;
   }
-  const passwordResetLink = await getAuth().generatePasswordResetLink(email);
   await audit(actor, "developer_managed_account_created", user.uid, { email, role });
-  return { uid: user.uid, email, role, passwordResetLink };
+  return { uid: user.uid, email, role, passwordResetLink: user.passwordResetLink };
 });
 
 exports.getDeveloperUserStatistics = onCall(async (request) => {
