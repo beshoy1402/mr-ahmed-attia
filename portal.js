@@ -18,6 +18,9 @@ const copy = {
     signing: "Signing in…", signIn: "Sign in securely",
     errors: {
       "auth/invalid-email": "Enter a valid email address.",
+      "auth/operation-not-allowed": "Email/password sign-in is not enabled in Firebase Authentication.",
+      "auth/unauthorized-domain": "This website domain is not authorized in Firebase Authentication settings.",
+      "auth/invalid-api-key": "The Firebase web API key is invalid. Check the web app configuration.",
       "auth/user-disabled": "This account has been disabled. Contact your teacher.",
       "auth/user-not-found": "No account was found for this email.",
       "auth/wrong-password": "The password is incorrect.",
@@ -37,6 +40,9 @@ const copy = {
     signing: "جارٍ تسجيل الدخول…", signIn: "تسجيل الدخول بأمان",
     errors: {
       "auth/invalid-email": "أدخل بريدًا إلكترونيًا صحيحًا.",
+      "auth/operation-not-allowed": "تسجيل الدخول بالبريد وكلمة المرور غير مفعّل في Firebase Authentication.",
+      "auth/unauthorized-domain": "نطاق هذا الموقع غير مضاف إلى النطاقات المسموح بها في Firebase Authentication.",
+      "auth/invalid-api-key": "مفتاح Firebase غير صحيح. تحقق من إعدادات تطبيق الويب.",
       "auth/user-disabled": "تم تعطيل هذا الحساب. تواصل مع المدرس.",
       "auth/user-not-found": "لا يوجد حساب بهذا البريد الإلكتروني.",
       "auth/wrong-password": "كلمة المرور غير صحيحة.",
