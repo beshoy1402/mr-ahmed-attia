@@ -31,6 +31,9 @@ function cleanText(value, max) {
 exports.requestAccountAccess = onCall(async (request) => {
   const auth = requireUser(request);
   const uid = auth.uid;
+  if (auth.token.email_verified !== true) {
+    throw new HttpsError("failed-precondition", "Verify your email address before requesting account access.");
+  }
   const requestedRole = request.data?.requestedRole;
   const displayName = cleanText(request.data?.displayName, 80);
 
@@ -51,6 +54,12 @@ exports.requestAccountAccess = onCall(async (request) => {
     }
     if (requestSnap.exists && requestSnap.get("status") === "pending") {
       throw new HttpsError("already-exists", "Your access request is already waiting for review.");
+    }
+    if (requestSnap.exists) {
+      const lastUpdated = requestSnap.get("updatedAt");
+      if (lastUpdated?.toMillis && Date.now() - lastUpdated.toMillis() < 5 * 60 * 1000) {
+        throw new HttpsError("resource-exhausted", "Please wait five minutes before submitting another request.");
+      }
     }
 
     const requestData = {
@@ -139,14 +148,15 @@ exports.reviewAccessRequest = onCall(async (request) => {
   }
 
   const reviewedAt = FieldValue.serverTimestamp();
+  let previousClaims = null;
   if (decision === "approve") {
     const user = await getAuth().getUser(targetUid);
-    const existingClaims = user.customClaims || {};
-    if (["mainTeacher", "superAdmin", "developer", "accountant", "centerManager", "assistant", "additionalTeacher"].includes(existingClaims.role)) {
+    previousClaims = user.customClaims || {};
+    if (["mainTeacher", "superAdmin", "developer", "accountant", "centerManager", "assistant", "additionalTeacher"].includes(previousClaims.role)) {
       throw new HttpsError("failed-precondition", "This account already has a privileged role and requires a separate review.");
     }
     await getAuth().setCustomUserClaims(targetUid, {
-      ...existingClaims,
+      ...previousClaims,
       role: data.requestedRole,
       accountStatus: "active"
     });
@@ -178,7 +188,15 @@ exports.reviewAccessRequest = onCall(async (request) => {
     assignedRole: decision === "approve" ? data.requestedRole : null,
     createdAt: reviewedAt
   });
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (error) {
+    // Keep Auth claims and Firestore approval state consistent if the write fails.
+    if (decision === "approve" && previousClaims) {
+      await getAuth().setCustomUserClaims(targetUid, previousClaims);
+    }
+    throw error;
+  }
 
   return { status: finalStatus };
 });
