@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Firebase local state and debug logs
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Local editor/OS files
+.DS_Store
+.vscode/
+.idea/
