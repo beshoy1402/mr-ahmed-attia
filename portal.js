@@ -50,7 +50,7 @@ const copy = {
     loading:"Loading account status…", loadingRequests:"Loading pending requests…", noRequests:"There are no pending access requests.",
     requestTitle:"Request account access", name:"Your full name", role:"I am a", student:"Student", parent:"Parent", request:"Submit access request",
     teacherTitle:"Teacher review", approve:"Approve", reject:"Reject", reviewFailed:"Could not complete the review. Refresh and try again.",
-    statusError:"Your sign-in worked, but account status could not be loaded. Protected data remains unavailable."
+    statusError:"Your sign-in worked, but the account-approval backend is not active yet. Protected data remains unavailable."
   },
   ar: {
     signing: "جارٍ تسجيل الدخول…", signIn: "تسجيل الدخول بأمان",
@@ -79,7 +79,7 @@ const copy = {
     loading:"جارٍ تحميل حالة الحساب…", loadingRequests:"جارٍ تحميل الطلبات المعلقة…", noRequests:"لا توجد طلبات صلاحية معلقة.",
     requestTitle:"طلب صلاحية حساب", name:"اسمك بالكامل", role:"أنا", student:"طالب", parent:"ولي أمر", request:"إرسال طلب الصلاحية",
     teacherTitle:"مراجعة المدرس", approve:"موافقة", reject:"رفض", reviewFailed:"تعذرت مراجعة الطلب. حدّث الصفحة وحاول مجددًا.",
-    statusError:"تم تسجيل الدخول، لكن تعذر تحميل حالة الحساب. تظل البيانات المحمية غير متاحة."
+    statusError:"تم تسجيل الدخول، لكن نظام موافقة الحساب لم يتم تفعيله بعد. تظل البيانات المحمية غير متاحة."
   }
 };
 
