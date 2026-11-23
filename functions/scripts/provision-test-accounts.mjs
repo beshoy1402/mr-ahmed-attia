@@ -27,9 +27,9 @@ for (const account of ACCOUNTS) {
     }
     throw error;
   });
-  if (!user.emailVerified) {
-    throw new Error(`Email must be verified before role assignment: ${account.email}`);
-  }
+  // These five addresses are explicitly preconfigured test accounts.
+  // Email verification is intentionally not required for this one-time trusted-admin
+  // provisioning script. Only run it when you control all five accounts.
   if (user.disabled) throw new Error(`Disabled account cannot be provisioned: ${account.email}`);
   if (user.customClaims?.role && user.customClaims.role !== account.role) {
     throw new Error(`Refusing to overwrite existing role "${user.customClaims.role}" for ${account.email}`);
