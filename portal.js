@@ -157,7 +157,7 @@ async function refreshAccount(user) {
   try {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
-    accountStatus.textContent = statusLabel(data.status);
+    accountStatus.textContent = statusLabel(data.status) + (data.platformControls?.maintenance ? "\n\n" + (data.platformControls.maintenanceMessage || "The platform is undergoing scheduled maintenance.") : "");
     if (data.status === "active" && data.role) renderDashboard(data.role);
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
