@@ -40,7 +40,8 @@ The current public page is a static HTML file. Do not add secrets to source cont
 - [x] Public SAT Reading & Writing website refreshed and deployed.
 - [x] Firebase configuration scaffold and fail-closed Firestore/Storage rules added.
 - [x] Firebase connection checklist, initial data model, and release checklist added.
-- [ ] Connect the confirmed Mr. Ahmed Attia Firebase project and implement/test scoped rules.
+- [x] Confirm and pin the dedicated Firebase project ID (`mr-ahmed-attia-12345`) in Firebase CLI and environment scaffolding.
+- [ ] Register the Firebase Web App, add its public config in Vercel, enable required services, and implement/test scoped rules.
 - [ ] Firebase environments and backend.
 - [ ] Authentication and role-scoped permissions.
 - [ ] Courses, enrollments, question bank, and imports.
