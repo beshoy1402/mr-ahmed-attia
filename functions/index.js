@@ -138,37 +138,56 @@ exports.reviewAccessRequest = onCall(async (request) => {
 
   const requestRef = db.doc(`accessRequests/${targetUid}`);
   const profileRef = db.doc(`userProfiles/${targetUid}`);
-  const requestSnap = await requestRef.get();
-  if (!requestSnap.exists || requestSnap.get("status") !== "pending") {
-    throw new HttpsError("failed-precondition", "This request is no longer pending.");
-  }
-  const data = requestSnap.data();
-  if (!ALLOWED_REQUEST_ROLES.has(data.requestedRole)) {
-    throw new HttpsError("failed-precondition", "The requested role is not eligible for this approval workflow.");
-  }
+  const data = await db.runTransaction(async (tx) => {
+    const requestSnap = await tx.get(requestRef);
+    if (!requestSnap.exists || requestSnap.get("status") !== "pending") {
+      throw new HttpsError("failed-precondition", "This request is no longer pending or is already being reviewed.");
+    }
+    const pendingData = requestSnap.data();
+    if (!ALLOWED_REQUEST_ROLES.has(pendingData.requestedRole)) {
+      throw new HttpsError("failed-precondition", "The requested role is not eligible for this approval workflow.");
+    }
+    tx.update(requestRef, {
+      status: "reviewing",
+      reviewStartedBy: reviewer.uid,
+      reviewStartedAt: FieldValue.serverTimestamp()
+    });
+    return pendingData;
+  });
 
-  const reviewedAt = FieldValue.serverTimestamp();
   let previousClaims = null;
   if (decision === "approve") {
-    const user = await getAuth().getUser(targetUid);
-    previousClaims = user.customClaims || {};
-    if (["mainTeacher", "superAdmin", "developer", "accountant", "centerManager", "assistant", "additionalTeacher"].includes(previousClaims.role)) {
-      throw new HttpsError("failed-precondition", "This account already has a privileged role and requires a separate review.");
+    try {
+      const user = await getAuth().getUser(targetUid);
+      previousClaims = user.customClaims || {};
+      if (["mainTeacher", "superAdmin", "developer", "accountant", "centerManager", "assistant", "additionalTeacher"].includes(previousClaims.role)) {
+        throw new HttpsError("failed-precondition", "This account already has a privileged role and requires a separate review.");
+      }
+      await getAuth().setCustomUserClaims(targetUid, {
+        ...previousClaims,
+        role: data.requestedRole,
+        accountStatus: "active"
+      });
+    } catch (error) {
+      await requestRef.update({
+        status: "pending",
+        reviewStartedBy: FieldValue.delete(),
+        reviewStartedAt: FieldValue.delete()
+      });
+      throw error;
     }
-    await getAuth().setCustomUserClaims(targetUid, {
-      ...previousClaims,
-      role: data.requestedRole,
-      accountStatus: "active"
-    });
   }
 
   const finalStatus = decision === "approve" ? "active" : "rejected";
+  const reviewedAt = FieldValue.serverTimestamp();
   const batch = db.batch();
   batch.update(requestRef, {
     status: finalStatus,
     reviewedBy: reviewer.uid,
     reviewedAt,
-    updatedAt: reviewedAt
+    updatedAt: reviewedAt,
+    reviewStartedBy: FieldValue.delete(),
+    reviewStartedAt: FieldValue.delete()
   });
   batch.set(profileRef, {
     uid: targetUid,
@@ -191,10 +210,14 @@ exports.reviewAccessRequest = onCall(async (request) => {
   try {
     await batch.commit();
   } catch (error) {
-    // Keep Auth claims and Firestore approval state consistent if the write fails.
     if (decision === "approve" && previousClaims) {
       await getAuth().setCustomUserClaims(targetUid, previousClaims);
     }
+    await requestRef.update({
+      status: "pending",
+      reviewStartedBy: FieldValue.delete(),
+      reviewStartedAt: FieldValue.delete()
+    });
     throw error;
   }
 
