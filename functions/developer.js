@@ -66,6 +66,8 @@ const FEATURES = [
   ["dev.extensible-registry","Extensible feature registry","Global Control"],
   ["dev.dashboard-separation","Separate Developer and Administrator dashboards","Global Control"]
 ].map(([id, name, category]) => ({ id, name, category, optional: true, dependencies: [] }));
+const DEPENDENCIES = { "client.copy-config":["client.independent-config"], "client.packages":["feature.independent"], "recovery.restore":["recovery.manual-backup"], "recovery.disaster-center":["recovery.manual-backup"], "release.rollback":["release.history"], "maintenance.announcements":["maintenance.mode"] };
+FEATURES.forEach((feature) => { feature.dependencies = DEPENDENCIES[feature.id] || []; });
 
 function requireDeveloper(request) {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
@@ -158,6 +160,22 @@ exports.updateDeveloperFeature = onCall(async (request) => {
   await ref.set({ ...config, featureId: id, featureName: feature.name, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   await audit(actor, "developer_feature_updated", id, config);
   return { success: true };
+});
+
+exports.bulkUpdateDeveloperFeatures = onCall(async (request) => {
+  const actor = requireDeveloper(request);
+  const enabled = request.data?.enabled;
+  if (typeof enabled !== "boolean") throw new HttpsError("invalid-argument", "enabled must be true or false.");
+  const batch = db.batch();
+  FEATURES.forEach((feature) => {
+    batch.set(db.doc("developerFeatureSettings/" + feature.id), {
+      enabled, featureId: feature.id, featureName: feature.name,
+      updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+  await batch.commit();
+  await audit(actor, "developer_features_bulk_updated", "all", { enabled, count: FEATURES.length });
+  return { success: true, count: FEATURES.length };
 });
 
 exports.saveDeveloperFeatureTemplate = onCall(async (request) => {
