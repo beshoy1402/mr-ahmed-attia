@@ -32,6 +32,7 @@ async function assertSystemWritable() {
   const snap = await db.doc("developerSettings/global").get();
   const settings = snap.exists ? snap.data() : {};
   if (settings.readOnly) throw new HttpsError("failed-precondition", "The platform is currently in read-only mode.");
+  if (settings.emergencyMode) throw new HttpsError("unavailable", "The platform is temporarily in emergency mode.");
   return settings;
 }
 
