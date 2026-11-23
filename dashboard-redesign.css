@@ -146,3 +146,5 @@ body:has(.signed.show){display:block;padding:24px;background:var(--dash-paper)}
 .teacher-form-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;padding-top:4px}
 @media(max-width:900px){.teacher-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.teacher-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-form{grid-template-columns:1fr;padding:12px}.teacher-form h4,.teacher-form-actions{grid-column:auto}.teacher-list-toolbar{align-items:stretch;flex-direction:column}.teacher-list-toolbar input{max-width:none}.teacher-record{align-items:flex-start;flex-direction:column}.teacher-record-actions{width:100%}.teacher-record-actions button{flex:1}.teacher-workspace-panel{gap:11px}}
+
+.dashboard-tile[role="button"]{cursor:pointer}.dashboard-tile[role="button"]:focus-visible{outline:3px solid #7894e3;outline-offset:3px}
