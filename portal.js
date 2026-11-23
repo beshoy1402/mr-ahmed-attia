@@ -181,6 +181,10 @@ async function refreshAccount(user) {
   } catch (error) {
     accountStatus.textContent = copy[lang].statusError;
     console.error("Account status lookup failed:", error);
+    if (error.code === "functions/permission-denied" && String(error.message || "").includes("temporarily restricted")) {
+      await signOut(auth);
+      showMessage("Portal access is temporarily restricted by the Developer.", "error");
+    }
   }
 }
 
