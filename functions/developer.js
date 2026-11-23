@@ -384,8 +384,8 @@ exports.listManagedAccounts = onCall(async (request) => {
 exports.setManagedAccountStatus = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
   const actor = request.auth, actorRole = actor.token.role;
-  if (actorRole !== "developer" || actor.token.accountStatus !== "active") {
-    throw new HttpsError("permission-denied", "Only the active Developer can deactivate accounts.");
+  if (!["developer", "superAdmin"].includes(actorRole) || actor.token.accountStatus !== "active") {
+    throw new HttpsError("permission-denied", "An active Developer or Administrator account is required.");
   }
   const uid = clean(request.data?.uid, 128);
   const disabled = request.data?.disabled;
@@ -394,6 +394,9 @@ exports.setManagedAccountStatus = onCall(async (request) => {
   }
   const target = await getAuth().getUser(uid);
   const claims = target.customClaims || {};
+  if (actorRole === "superAdmin" && !["student", "parent", "teacher", "assistant"].includes(claims.role)) {
+    throw new HttpsError("permission-denied", "Administrators can manage educational accounts only.");
+  }
   await getAuth().updateUser(uid, { disabled });
   await getAuth().setCustomUserClaims(uid, { ...claims, accountStatus: disabled ? "disabled" : "active" });
   await db.doc("userProfiles/" + uid).set({
