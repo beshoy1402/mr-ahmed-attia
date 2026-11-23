@@ -72,6 +72,14 @@ exports.requestAccountAccess = onCall(async (request) => {
       updatedAt: FieldValue.serverTimestamp()
     };
     tx.set(requestRef, requestData);
+    tx.set(profileRef, {
+      uid,
+      email: auth.token.email || null,
+      displayName,
+      role: null,
+      status: "pending",
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
     tx.set(db.collection("auditEvents").doc(), {
       type: "account_access_requested",
       actorUid: uid,
@@ -160,8 +168,8 @@ exports.reviewAccessRequest = onCall(async (request) => {
     try {
       const user = await getAuth().getUser(targetUid);
       previousClaims = user.customClaims || {};
-      if (["mainTeacher", "superAdmin", "developer", "accountant", "centerManager", "assistant", "additionalTeacher"].includes(previousClaims.role)) {
-        throw new HttpsError("failed-precondition", "This account already has a privileged role and requires a separate review.");
+      if (previousClaims.role) {
+        throw new HttpsError("failed-precondition", "This account already has a role and requires a separate review.");
       }
       await getAuth().setCustomUserClaims(targetUid, {
         ...previousClaims,
