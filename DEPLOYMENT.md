@@ -1,8 +1,21 @@
 # Deployment and Environment Plan
 
-## Current status
+## Current release
 
-No matching Vercel project was found during the initial connected-account search. Firebase configuration and production credentials have not been verified. No production deployment is claimed by this document.
+- Vercel project: `mr-ahmed-attia`.
+- Connected repository: `beshoy1402/mr-ahmed-attia`.
+- Branch deployed: `production-foundation`.
+- Commit: `aa9270e6117b2917a97c67a80c28edfbdae4000f`.
+- Deployment: `READY` (production target).
+- Public URL: https://mr-ahmed-attia-99m5mf8og-beshoys-projects-3aeeadba.vercel.app
+- Custom domain: none attached.
+- Current scope: public SAT Reading & Writing marketing website only.
+
+The deployment service reported the deployment as READY. The web search inspection endpoint could not independently retrieve the page, so do not treat that as a full browser QA pass.
+
+## Not yet deployed
+
+Firebase backend, authentication, student portal, parent portal, teacher/admin dashboards, exams, payments, AI services, and third-party integrations are not live.
 
 ## Required environments
 
@@ -16,7 +29,7 @@ Each environment must have isolated Firebase resources, storage buckets, secrets
 
 ## Deployment gates
 
-Before a production release:
+Before each production release:
 1. Confirm target Git repository, branch, Vercel project, and environment.
 2. Verify required environment variables exist without printing secret values.
 3. Run lint, type checks, unit tests, integration tests, and production build.
@@ -37,7 +50,7 @@ Configure secrets directly in Firebase/Vercel secret-management interfaces. Do n
 ## External services requiring owner setup
 
 - Firebase project and billing/region decision.
-- Vercel project and domain.
+- Custom domain, if desired.
 - Email and phone OTP delivery.
 - Payment gateway merchant account and webhooks.
 - AI provider credentials and budget.
