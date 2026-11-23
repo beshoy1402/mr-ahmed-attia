@@ -21,7 +21,7 @@ const TYPES = {
 function requireTeacher(request) {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
   const { role, accountStatus } = request.auth.token;
-  if (!["teacher", "mainTeacher", "superAdmin"].includes(role) || accountStatus !== "active") {
+  if (!["teacher", "mainTeacher", "additionalTeacher", "superAdmin"].includes(role) || accountStatus !== "active") {
     throw new HttpsError("permission-denied", "An active teacher account is required.");
   }
   return request.auth;
@@ -55,6 +55,12 @@ function validateFields(type, input) {
   if (type === "attendance" && !["present", "absent", "late", "excused"].includes(fields.status)) throw new HttpsError("invalid-argument", "Choose a valid attendance status.");
   if (type === "students" && fields.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) throw new HttpsError("invalid-argument", "Enter a valid student email.");
   return fields;
+}
+async function assertTeacherWritesEnabled() {
+  const snap = await db.doc("developerSettings/global").get();
+  const settings = snap.exists ? snap.data() : {};
+  if (settings.readOnly) throw new HttpsError("failed-precondition", "The platform is currently in read-only mode.");
+  if (settings.emergencyMode) throw new HttpsError("unavailable", "The platform is temporarily in emergency mode.");
 }
 async function assertOwnedReference(actor, type, id) {
   if (!id) return;
