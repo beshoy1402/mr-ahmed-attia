@@ -126,7 +126,7 @@ body:has(.signed.show){display:block;padding:24px;background:var(--dash-paper)}
 .teacher-action:hover,.teacher-small:hover,.teacher-type:hover{border-color:#9eb3e8}
 .teacher-type.active{background:#edf2ff;border-color:#b9c9f2;color:#3157b8}
 .teacher-list-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between}
-.teacher-list-toolbar input{max-width:360px;border:1px solid #dfe6f0;border-radius:10px;padding:11px 13px;font:12px inherit}
+.teacher-list-toolbar input{max-width:360px;border:1px solid #dfe6f0;border-radius:10px;padding:11px 13px;font:inherit;font-size:12px}
 .teacher-record-list{display:grid;gap:8px}
 .teacher-record{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #e5eaf2;border-radius:12px;min-width:0}
 .teacher-record>div:first-child{min-width:0}
