@@ -128,7 +128,7 @@ exports.getMyAccountStatus = onCall(async (request) => {
     displayName: profile?.displayName || accessRequest?.displayName || null,
     reviewedAt: profile?.reviewedAt?.toDate?.().toISOString?.() || null,
     canReviewRequests: ["mainTeacher", "superAdmin"].includes(auth.token.role) && auth.token.accountStatus === "active",
-    platformControls: { maintenance: controls.maintenance === true, readOnly: controls.readOnly === true, emergencyMode: controls.emergencyMode === true }
+    platformControls: { maintenance: controls.maintenance === true, maintenanceMessage: controls.maintenanceMessage || "", readOnly: controls.readOnly === true, emergencyMode: controls.emergencyMode === true }
   };
 });
 
