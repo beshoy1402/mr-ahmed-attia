@@ -20,8 +20,8 @@ function requireUser(request) {
 function requireApprover(request) {
   const auth = requireUser(request);
   const role = auth.token.role;
-  if (!["mainTeacher", "superAdmin"].includes(role) || auth.token.accountStatus !== "active") {
-    throw new HttpsError("permission-denied", "Only an active main teacher or super admin can review access requests.");
+  if (!["teacher", "mainTeacher", "superAdmin"].includes(role) || auth.token.accountStatus !== "active") {
+    throw new HttpsError("permission-denied", "Only an active teacher or super admin can review access requests.");
   }
   return auth;
 }
@@ -129,7 +129,7 @@ exports.getMyAccountStatus = onCall(async (request) => {
     requestedRole: accessRequest?.requestedRole || null,
     displayName: profile?.displayName || accessRequest?.displayName || null,
     reviewedAt: profile?.reviewedAt?.toDate?.().toISOString?.() || null,
-    canReviewRequests: ["mainTeacher", "superAdmin"].includes(auth.token.role) && auth.token.accountStatus === "active",
+    canReviewRequests: ["teacher", "mainTeacher", "superAdmin"].includes(auth.token.role) && auth.token.accountStatus === "active",
     platformControls: { maintenance: controls.maintenance === true, maintenanceMessage: controls.maintenanceMessage || "", readOnly: controls.readOnly === true, emergencyMode: controls.emergencyMode === true }
   };
 });
