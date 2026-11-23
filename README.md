@@ -20,6 +20,9 @@ See:
 - [Architecture](./ARCHITECTURE.md)
 - [Security model](./SECURITY.md)
 - [Deployment plan](./DEPLOYMENT.md)
+- [Firebase connection checklist](./FIREBASE_SETUP.md)
+- [Logical data model](./docs/DATA_MODEL.md)
+- [Release readiness checklist](./docs/RELEASE_CHECKLIST.md)
 - [Claude Code project instructions](./CLAUDE.md)
 
 ## Important production rule
@@ -35,6 +38,9 @@ The current public page is a static HTML file. Do not add secrets to source cont
 - [x] Production foundation branch created.
 - [x] Product requirements, architecture, security, deployment, and Claude Code instructions documented.
 - [x] Public SAT Reading & Writing website refreshed and deployed.
+- [x] Firebase configuration scaffold and fail-closed Firestore/Storage rules added.
+- [x] Firebase connection checklist, initial data model, and release checklist added.
+- [ ] Connect the confirmed Mr. Ahmed Attia Firebase project and implement/test scoped rules.
 - [ ] Firebase environments and backend.
 - [ ] Authentication and role-scoped permissions.
 - [ ] Courses, enrollments, question bank, and imports.
