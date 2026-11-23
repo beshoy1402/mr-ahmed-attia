@@ -18,20 +18,26 @@ if (!user.emailVerified) {
 }
 
 const markerRef = db.doc("system/bootstrap");
-const marker = await markerRef.get();
-if (marker.exists && marker.get("mainTeacherUid") !== uid) {
-  throw new Error("A main teacher has already been bootstrapped. Do not overwrite the existing owner.");
-}
-if (marker.exists && marker.get("status") === "active") {
+let alreadyActive = false;
+await db.runTransaction(async (tx) => {
+  const marker = await tx.get(markerRef);
+  if (marker.exists && marker.get("mainTeacherUid") !== uid) {
+    throw new Error("A main teacher has already been bootstrapped. Do not overwrite the existing owner.");
+  }
+  if (marker.exists && marker.get("status") === "active") {
+    alreadyActive = true;
+    return;
+  }
+  tx.set(markerRef, {
+    mainTeacherUid: uid,
+    status: "provisioning",
+    updatedAt: FieldValue.serverTimestamp()
+  }, { merge: true });
+});
+if (alreadyActive) {
   console.log("This UID is already the bootstrapped main teacher.");
   process.exit(0);
 }
-
-await markerRef.set({
-  mainTeacherUid: uid,
-  status: "provisioning",
-  updatedAt: FieldValue.serverTimestamp()
-}, { merge: true });
 
 const existingClaims = user.customClaims || {};
 if (["superAdmin", "developer", "accountant"].includes(existingClaims.role)) {
