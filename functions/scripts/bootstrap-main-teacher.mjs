@@ -40,8 +40,8 @@ if (alreadyActive) {
 }
 
 const existingClaims = user.customClaims || {};
-if (["superAdmin", "developer", "accountant"].includes(existingClaims.role)) {
-  throw new Error("The account already has a privileged role. Review it manually before proceeding.");
+if (existingClaims.role && existingClaims.role !== "mainTeacher") {
+  throw new Error("The account already has a role. Review it manually before proceeding.");
 }
 await auth.setCustomUserClaims(uid, {
   ...existingClaims,
