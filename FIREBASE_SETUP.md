@@ -2,7 +2,7 @@
 
 ## Important
 
-This repository has Firebase configuration and **deny-by-default** rules templates. It is not connected to a Firebase project yet. No project ID, credentials, user data, or production database is assumed.
+This repository has Firebase configuration and **deny-by-default** rules templates. The owner has confirmed the dedicated Firebase project ID: `mr-ahmed-attia-12345`. The repository is configured to target this project, but the Firebase Web App configuration and service enablement have not yet been supplied or verified.
 
 Do not deploy these rules to an existing Firebase project until its ownership and current rules have been checked. The current rules intentionally deny every Firestore and Storage request; they are a safe starting point, not a functioning application authorization policy.
 
@@ -10,10 +10,10 @@ Do not deploy these rules to an existing Firebase project until its ownership an
 
 In the Firebase Console:
 1. Open the project intended specifically for **Mr. Ahmed Attia's SAT Reading & Writing LMS**.
-2. Confirm the project name and project ID.
+2. Verify that its project ID is exactly `mr-ahmed-attia-12345`.
 3. Do not reuse another teacher's or another application’s Firebase project.
 4. Confirm billing plan, region, data location, and project owners.
-5. Create a separate development/staging project before testing real data.
+5. Create separate development/staging projects before testing real data.
 
 ## 2. Register the web application
 
@@ -22,7 +22,7 @@ In the Firebase Console:
 3. The Firebase web config is public app identification, not an admin credential. Security must come from Authentication, Firestore/Storage rules, App Check, and trusted server authorization.
 4. Never commit real environment files or service-account keys.
 
-Required public web values are listed in `.env.example`.
+Required public web values are listed in `.env.example`. The project ID is prefilled as `mr-ahmed-attia-12345`; the remaining values must come from the registered Firebase Web App configuration.
 
 ## 3. Enable only the services needed for the first milestone
 
@@ -36,13 +36,14 @@ Do not expose admin SDK credentials in frontend code.
 
 ## 4. Rules and emulator workflow
 
-Install the Firebase CLI locally and authenticate with an account authorized for this project. Start with the local emulators and test rules before deploying anything.
+Install the Firebase CLI locally and authenticate with an account authorized for this project. The `.firebaserc` file selects `mr-ahmed-attia-12345` as the default CLI target. Start with the local emulators and test rules before deploying anything. Verify the active Firebase project with `firebase use` before every deploy.
 
 Example commands:
 
 ```bash
 npm install --global firebase-tools
 firebase login
+firebase use
 firebase emulators:start
 ```
 
