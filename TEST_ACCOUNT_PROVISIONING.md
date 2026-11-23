@@ -17,7 +17,7 @@ The test teacher account is assigned the limited `teacher` role, not `mainTeache
 ## Requirements
 
 - All five accounts already exist in Firebase Authentication.
-- Verify each account's email address in Firebase Authentication before running.
+- Email verification is not required for these five predefined test accounts. Run this only if you control all five accounts, especially `admin@gmail.com` because it receives `superAdmin`.
 - Run from a trusted local machine with Google Application Default Credentials for an identity authorized to administer Firebase Authentication and Firestore in project `mr-ahmed-attia-12345`.
 - Do not download or commit service-account JSON keys. Use Application Default Credentials.
 
@@ -38,7 +38,7 @@ The first run is a dry run. Check every email, role, and UID printed. Only after
 node .\\scripts\\provision-test-accounts.mjs --apply
 ```
 
-The script refuses a different Firebase project, missing/disabled/unverified accounts, conflicting existing roles, or a second completed run. It restores previously changed custom claims if the write process fails. After success, all five accounts must sign out and sign in again.
+The script refuses a different Firebase project, missing or disabled accounts, conflicting existing roles, or a second completed run. It intentionally does not require email verification for these five predefined test accounts. It restores previously changed custom claims if the write process fails. After success, all five accounts must sign out and sign in again.
 
 ## Security boundary
 
