@@ -276,6 +276,11 @@ document.getElementById("signoutButton").addEventListener("click", async () => {
 
 onAuthStateChanged(auth, async user => {
   if (user) {
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.role === "developer" && token.claims.accountStatus === "active") {
+      window.location.replace("/developer.html");
+      return;
+    }
     currentUser = user;
     loginArea.style.display = "none";
     signedArea.classList.add("show");
