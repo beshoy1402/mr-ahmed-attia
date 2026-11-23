@@ -40,6 +40,7 @@ const roleQuicklinks = document.getElementById("roleQuicklinks");
 const roleDetailStatus = document.getElementById("roleDetailStatus");
 const teacherWorkspacePanel = document.getElementById("teacherWorkspacePanel");
 let teacherRecords = [];
+let teacherIssuedCredentials = null;
 let teacherActiveType = "classes";
 let lang = "en";
 let currentUser = null;
@@ -223,7 +224,7 @@ function renderDashboard(role) {
 const teacherArabic = {
   metrics:{students:"الطلاب",classes:"الفصول",courses:"الدورات",exams:"الاختبارات",homework:"الواجبات"},quickActions:{student:"إضافة طالب",class:"إنشاء فصل",course:"إنشاء دورة",exam:"إنشاء اختبار",attendance:"تسجيل الحضور"},types:{classes:"الفصول",students:"الطلاب",groups:"المجموعات",courses:"الدورات",lessons:"الدروس",questions:"الأسئلة",exams:"الاختبارات",grades:"الدرجات",attendance:"الحضور",homework:"الواجبات",schedules:"الجداول"},
   fields:{name:"الاسم",displayName:"اسم الطالب",email:"البريد الإلكتروني",phone:"رقم الهاتف",classId:"الفصل",parentName:"اسم ولي الأمر",parentEmail:"بريد ولي الأمر",notes:"ملاحظات",status:"الحالة",title:"العنوان",subject:"المادة",level:"المستوى",schedule:"الموعد",room:"القاعة",description:"الوصف",courseId:"الدورة",unit:"الوحدة / الفصل",content:"محتوى الدرس",resourceUrl:"رابط المادة",durationMinutes:"المدة بالدقائق",prompt:"نص السؤال",passage:"قطعة القراءة",options:"الاختيارات (كل اختيار في سطر)",correctAnswer:"الإجابة الصحيحة",explanation:"الشرح",domain:"مجال SAT",skill:"المهارة",difficulty:"مستوى الصعوبة",examId:"الاختبار",score:"الدرجة",maxScore:"الدرجة النهائية",feedback:"ملاحظات المدرس",published:"نشر الدرجة",date:"التاريخ",startsAt:"وقت البداية",endsAt:"وقت النهاية",dueAt:"موعد التسليم",meetingUrl:"رابط اللقاء"},
-  loading:"جارٍ تحميل مساحة المدرس…",search:"ابحث في السجلات",add:"إضافة",edit:"تعديل",archive:"أرشفة",cancel:"إلغاء",save:"حفظ",saveChanges:"حفظ التعديلات",addRecord:"إضافة سجل",select:"اختر…",noMatch:"لا توجد نتائج مطابقة.",empty:"لا توجد سجلات بعد. استخدم الزر أعلاه لإضافة أول سجل.",quick:"إجراءات سريعة",private:"سجلاتك خاصة بحساب المدرس. يتم حفظ التغييرات بشكل آمن.",roster:"ملاحظة: هذه سجلات لإدارة قائمة الطلاب وليست حسابات تسجيل دخول. إنشاء حساب الطالب ودعوته عملية منفصلة.",archiveConfirm:"هل تريد أرشفة هذا السجل؟ سيختفي من مساحة العمل النشطة.",archived:"تمت أرشفة السجل.",saved:"تم الحفظ بنجاح.",choices:"اختيار أ\nاختيار ب\nاختيار ج\nاختيار د",draft:"مسودة",active:"نشط",published:"منشور",archivedStatus:"مؤرشف"
+  createLogin:"إنشاء حساب دخول",linkedLogin:"حساب الدخول مرتبط",copyPassword:"نسخ كلمة المرور",dismiss:"إغلاق",credentialTitle:"تم إنشاء حساب الطالب",credentialWarning:"احفظ كلمة المرور المؤقتة الآن. لن تظهر مرة أخرى.",createLoginConfirm:"إنشاء حساب دخول لهذا الطالب؟ سيتم إنشاء كلمة مرور مؤقتة لعرضها مرة واحدة.",loading:"جارٍ تحميل مساحة المدرس…",search:"ابحث في السجلات",add:"إضافة",edit:"تعديل",archive:"أرشفة",cancel:"إلغاء",save:"حفظ",saveChanges:"حفظ التعديلات",addRecord:"إضافة سجل",select:"اختر…",noMatch:"لا توجد نتائج مطابقة.",empty:"لا توجد سجلات بعد. استخدم الزر أعلاه لإضافة أول سجل.",quick:"إجراءات سريعة",private:"سجلاتك خاصة بحساب المدرس. يتم حفظ التغييرات بشكل آمن.",roster:"ملاحظة: هذه سجلات لإدارة قائمة الطلاب وليست حسابات تسجيل دخول. إنشاء حساب الطالب ودعوته عملية منفصلة.",archiveConfirm:"هل تريد أرشفة هذا السجل؟ سيختفي من مساحة العمل النشطة.",archived:"تمت أرشفة السجل.",saved:"تم الحفظ بنجاح.",choices:"اختيار أ\nاختيار ب\nاختيار ج\nاختيار د",draft:"مسودة",active:"نشط",published:"منشور",archivedStatus:"مؤرشف"
 };
 function teacherTr(en, key) { return lang === "ar" ? (teacherArabic[key] || en) : en; }
 function teacherTypeName(type) { return lang === "ar" ? (teacherArabic.types[type] || type) : type; }
@@ -271,6 +272,13 @@ function renderTeacherModule(index) {
   teacherCurrentModule = index;
   teacherWorkspacePanel.hidden = false;
   teacherWorkspacePanel.replaceChildren();
+  if (teacherIssuedCredentials) {
+    const credentials=document.createElement("section");credentials.className="teacher-credentials";
+    credentials.append(teacherText("strong","",teacherTr("Student login created","credentialTitle")),teacherText("p","",teacherIssuedCredentials.email),teacherText("code","teacher-password",teacherIssuedCredentials.password),teacherText("p","",teacherTr("Save this temporary password now. It will not be shown again.","credentialWarning")));
+    const actions=document.createElement("div");actions.className="teacher-form-actions";
+    actions.append(teacherButton(teacherTr("Copy password","copyPassword"),"teacher-action primary",async()=>{try{await navigator.clipboard.writeText(teacherIssuedCredentials.password);showMessage("Temporary password copied.","success");}catch{showMessage("Select and copy the password shown above.");}}),teacherButton(teacherTr("Dismiss","dismiss"),"teacher-small",()=>{teacherIssuedCredentials=null;renderTeacherModule(index);}));
+    credentials.append(actions);teacherWorkspacePanel.append(credentials);
+  }
   if (index === 0) {
     const active = teacherRecords.filter(item=>item.status!=="archived");
     const metrics = document.createElement("div"); metrics.className="teacher-metrics";
@@ -335,7 +343,17 @@ function renderTeacherModule(index) {
       const meta=[record.subject,record.email,record.date,record.status].filter(Boolean).join(" · ");
       const info=document.createElement("div");info.append(teacherText("strong","",name),teacherText("small","",meta));
       const actions=document.createElement("div");actions.className="teacher-record-actions";
-      actions.append(teacherButton(teacherTr("Edit","edit"),"teacher-small",()=>renderTeacherForm(currentType,index,record)),teacherButton(teacherTr("Archive","archive"),"teacher-small danger",async()=>{
+      actions.append(teacherButton(teacherTr("Edit","edit"),"teacher-small",()=>renderTeacherForm(currentType,index,record)));
+      if(currentType==="students") {
+        if(record.authUid) actions.append(teacherText("small","teacher-linked-login",teacherTr("Login linked","linkedLogin")));
+        else actions.append(teacherButton(lang==="ar"?"إنشاء حساب دخول":"Create login","teacher-small primary",async()=>{
+          if(!record.email){showMessage(lang==="ar"?"أضف بريد الطالب أولًا.":"Add a student email address first.");return;}
+          if(!confirm(teacherTr("Create a login account for this student? A temporary password will be shown once.","createLoginConfirm")))return;
+          try{const result=await call("createTeacherStudentAccount")({studentId:record.id});teacherIssuedCredentials={email:result.data.email,password:result.data.temporaryPassword};const refreshed=await call("getTeacherWorkspace")();teacherRecords=refreshed.data.records||[];renderTeacherModule(index);}
+          catch(error){showMessage(error.message||"Could not create the student login.");}
+        }));
+      }
+      actions.append(teacherButton(teacherTr("Archive","archive"),"teacher-small danger",async()=>{
         if(!confirm(teacherTr("Archive this record? It will be hidden from the active workspace.","archiveConfirm")))return;
         try{await call("archiveTeacherResource")({type:currentType,id:record.id});teacherRecords=teacherRecords.filter(item=>item.id!==record.id||item.type!==currentType);renderTeacherModule(index);showMessage(teacherTr("Record archived.","archived"),"success");}
         catch(error){showMessage(error.message||"Could not archive this record.");}
