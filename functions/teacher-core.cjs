@@ -92,6 +92,7 @@ exports.getTeacherWorkspace = onCall(async (request) => {
 
 exports.saveTeacherResource = onCall(async (request) => {
   const actor = requireTeacher(request);
+  await assertTeacherWritesEnabled();
   const type = clean(request.data?.type, 40);
   const id = clean(request.data?.id, 100) || randomUUID();
   if (!TYPES[type] || !/^[A-Za-z0-9_-]{8,100}$/.test(id)) throw new HttpsError("invalid-argument", "Invalid record type or ID.");
@@ -118,6 +119,7 @@ exports.saveTeacherResource = onCall(async (request) => {
 
 exports.archiveTeacherResource = onCall(async (request) => {
   const actor = requireTeacher(request);
+  await assertTeacherWritesEnabled();
   const type = clean(request.data?.type, 40), id = clean(request.data?.id, 100);
   if (!TYPES[type] || !/^[A-Za-z0-9_-]{8,100}$/.test(id)) throw new HttpsError("invalid-argument", "Invalid record.");
   const ref = db.doc("teacherResources/" + type + "_" + id);
