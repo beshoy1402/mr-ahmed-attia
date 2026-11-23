@@ -52,7 +52,8 @@ button.submit{width:100%;margin-top:22px;border:0;border-radius:12px;padding:15p
       <label for="requestedRole" data-en="I am a" data-ar="أنا">I am a</label><select id="requestedRole"><option value="student" data-en="Student" data-ar="طالب">Student</option><option value="parent" data-en="Parent" data-ar="ولي أمر">Parent</option></select>
       <button class="submit" id="requestAccessButton" type="submit" data-en="Submit access request" data-ar="إرسال طلب الصلاحية">Submit access request</button>
     </form>
-    <section id="teacherPanel" class="workflow" hidden><h3 data-en="Teacher review" data-ar="مراجعة المدرس">Teacher review</h3><div id="pendingList"></div></section>
+    <form id="featureRequestForm" class="workflow" hidden><h3>Request an additional feature</h3><label for="featureRequestTitle">Feature title</label><input id="featureRequestTitle" maxlength="100" required><label for="featureRequestDetails">What do you need?</label><input id="featureRequestDetails" maxlength="1000" required><label for="featureRequestClient">Client / school ID (optional)</label><input id="featureRequestClient" maxlength="80"><button class="submit" type="submit" id="featureRequestButton">Send feature request</button></form>
+  <section id="teacherPanel" class="workflow" hidden><h3 data-en="Teacher review" data-ar="مراجعة المدرس">Teacher review</h3><div id="pendingList"></div></section>
     <button class="signout" id="signoutButton" type="button" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
   </div>
   <div id="message" class="message" role="status" aria-live="polite"></div>
