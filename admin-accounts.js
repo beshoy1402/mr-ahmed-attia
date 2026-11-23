@@ -1,8 +1,8 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,setPersistence,browserLocalPersistence,signInWithEmailAndPassword,onAuthStateChanged,signOut,EmailAuthProvider,reauthenticateWithCredential} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+import { createCallable } from "./api-client.js";
 import {firebaseConfig} from "/firebase-config.js";
-const app=initializeApp(firebaseConfig),auth=getAuth(app),functions=getFunctions(app,"us-central1"),call=n=>httpsCallable(functions,n),$=id=>document.getElementById(id);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),call=createCallable(auth),$=id=>document.getElementById(id);
 const esc=v=>String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let accounts=[];
 async function confirmPassword(){const p=prompt("Confirm your current Administrator password:");if(!p)return false;try{await reauthenticateWithCredential(auth.currentUser,EmailAuthProvider.credential(auth.currentUser.email,p));return true;}catch(e){alert("Password confirmation failed.");return false;}}
