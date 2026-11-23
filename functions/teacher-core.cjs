@@ -51,6 +51,15 @@ function validateFields(type, input) {
   if (type === "students" && fields.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) throw new HttpsError("invalid-argument", "Enter a valid student email.");
   return fields;
 }
+async function assertOwnedReference(actor, type, id) {
+  if (!id) return;
+  if (!TYPES[type]) throw new HttpsError("invalid-argument", "Invalid linked record type.");
+  const ref = db.doc("teacherResources/" + type + "_" + clean(id, 100));
+  const snap = await ref.get();
+  if (!snap.exists || (snap.get("ownerUid") !== actor.uid && actor.token.role !== "superAdmin")) {
+    throw new HttpsError("failed-precondition", "A linked record was not found in your workspace.");
+  }
+}
 async function writeAudit(actor, action, type, id) {
   await db.collection("auditEvents").add({
     type: "teacher_" + action, actorUid: actor.uid, actorEmail: actor.token.email || null,
@@ -76,6 +85,8 @@ exports.saveTeacherResource = onCall(async (request) => {
   const id = clean(request.data?.id, 100) || randomUUID();
   if (!TYPES[type] || !/^[A-Za-z0-9_-]{8,100}$/.test(id)) throw new HttpsError("invalid-argument", "Invalid record type or ID.");
   const fields = validateFields(type, request.data?.fields);
+  const references = { classId: "classes", courseId: "courses", studentId: "students", examId: "exams" };
+  for (const [field, targetType] of Object.entries(references)) if (fields[field]) await assertOwnedReference(actor, targetType, fields[field]);
   const ref = db.doc("teacherResources/" + type + "_" + id);
   const current = await ref.get();
   if (current.exists && current.get("ownerUid") !== actor.uid && actor.token.role !== "superAdmin") {
