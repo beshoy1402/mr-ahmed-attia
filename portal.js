@@ -37,6 +37,10 @@ const roleWelcomeText = document.getElementById("roleWelcomeText");
 const roleWelcomeKicker = document.getElementById("roleWelcomeKicker");
 const roleModulesHeading = document.getElementById("roleModulesHeading");
 const roleQuicklinks = document.getElementById("roleQuicklinks");
+const roleDetailStatus = document.getElementById("roleDetailStatus");
+const teacherWorkspacePanel = document.getElementById("teacherWorkspacePanel");
+let teacherRecords = [];
+let teacherActiveType = "classes";
 let lang = "en";
 let currentUser = null;
 
@@ -175,11 +179,16 @@ function renderDashboard(role) {
     if (!item) return;
     roleNav.querySelectorAll("button").forEach((button,i)=>button.classList.toggle("active",i===index));
     roleDetailTitle.textContent = item[0];
-    roleDetailText.textContent = lang === "ar"
-      ? "هذا القسم مُجهّز ضمن تصميم لوحة التحكم، لكن وظائفه وبياناته لن تُفتح قبل تنفيذ الصلاحيات الآمنة واختبارها."
-      : "This section is included in the dashboard design. Its tools and data will remain unavailable until the required secure permissions are implemented and tested.";
+    roleDetailText.textContent = item[1];
     roleDetail.hidden = false;
     roleDetail.classList.add("active");
+    if (role === "teacher") {
+      roleDetailStatus.hidden = true;
+      renderTeacherModule(index);
+    } else {
+      roleDetailStatus.hidden = false;
+      teacherWorkspacePanel.hidden = true;
+    }
   };
   config.modules.forEach(([title, description], index) => {
     const navButton = document.createElement("button");
@@ -195,8 +204,9 @@ function renderDashboard(role) {
     detail.textContent = description;
     const lock = document.createElement("div");
     lock.className = "dashboard-lock";
-    lock.textContent = lang === "ar" ? "غير مفعّل بعد" : "NOT ENABLED YET";
+    lock.textContent = role === "teacher" ? (lang === "ar" ? "فتح القسم" : "OPEN SECTION") : (lang === "ar" ? "غير مفعّل بعد" : "NOT ENABLED YET");
     tile.append(heading,detail,lock);
+    if (role === "teacher") { tile.tabIndex = 0; tile.setAttribute("role","button"); tile.addEventListener("click",()=>showModule(index)); tile.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();showModule(index);}}); }
     dashboardModules.append(tile);
   });
   roleQuicklinks.replaceChildren();
@@ -208,6 +218,153 @@ function renderDashboard(role) {
   }
   showModule(0);
   roleDashboard.hidden = false;
+}
+const teacherSectionTypes = {
+  1: ["students","classes","groups"],
+  2: ["courses","lessons"],
+  3: ["questions","exams"],
+  4: ["grades"],
+  5: ["attendance","homework","schedules"]
+};
+const teacherFieldDefs = {
+  classes: [["name","Class name","text",true],["subject","Subject","text"],["level","Level","text"],["schedule","Schedule","text"],["room","Room","text"],["description","Description","textarea"],["status","Status","status"]],
+  students: [["displayName","Student name","text",true],["email","Email","email"],["phone","Phone","tel"],["classId","Class","ref:classes"],["parentName","Parent name","text"],["parentEmail","Parent email","email"],["notes","Notes","textarea"],["status","Status","status"]],
+  groups: [["name","Group name","text",true],["classId","Class","ref:classes"],["description","Description","textarea"],["status","Status","status"]],
+  courses: [["title","Course title","text",true],["subject","Subject","text"],["level","Level","text"],["description","Description","textarea"],["status","Status","status"]],
+  lessons: [["title","Lesson title","text",true],["courseId","Course","ref:courses",true],["unit","Unit / chapter","text"],["content","Lesson content","textarea"],["resourceUrl","Resource URL","url"],["durationMinutes","Duration (minutes)","number"],["status","Status","status"]],
+  questions: [["prompt","Question prompt","textarea",true],["passage","Reading passage","textarea"],["options","Answer choices (one per line)","textarea"],["correctAnswer","Correct answer","text"],["explanation","Explanation","textarea"],["domain","SAT domain","text"],["skill","Skill","text"],["difficulty","Difficulty","select:Easy,Medium,Hard"],["status","Status","status"]],
+  exams: [["title","Exam title","text",true],["classId","Class","ref:classes"],["courseId","Course","ref:courses"],["description","Instructions","textarea"],["durationMinutes","Duration (minutes)","number"],["startsAt","Start date and time","datetime-local"],["endsAt","End date and time","datetime-local"],["status","Status","status"]],
+  grades: [["studentId","Student","ref:students",true],["examId","Exam","ref:exams"],["score","Score","number",true],["maxScore","Maximum score","number",true],["feedback","Feedback","textarea"],["published","Publish grade","checkbox"]],
+  attendance: [["studentId","Student","ref:students",true],["classId","Class","ref:classes"],["date","Date","date",true],["status","Attendance","select:present,absent,late,excused",true],["notes","Notes","textarea"]],
+  homework: [["title","Homework title","text",true],["classId","Class","ref:classes"],["courseId","Course","ref:courses"],["description","Instructions","textarea"],["dueAt","Due date","datetime-local"],["status","Status","status"]],
+  schedules: [["title","Session title","text",true],["classId","Class","ref:classes"],["startsAt","Starts at","datetime-local",true],["endsAt","Ends at","datetime-local",true],["room","Room","text"],["meetingUrl","Meeting link","url"],["status","Status","status"]]
+};
+function teacherText(tag, className, value) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = value || "";
+  return node;
+}
+function teacherButton(label, className, action) {
+  const button = makeButton(label, className, action);
+  return button;
+}
+async function loadTeacherWorkspace() {
+  teacherWorkspacePanel.replaceChildren(teacherText("p","teacher-loading",lang==="ar"?"جارٍ تحميل مساحة المدرس…":"Loading your teaching workspace…"));
+  try {
+    const response = await call("getTeacherWorkspace")();
+    teacherRecords = response.data.records || [];
+    renderTeacherModule(teacherCurrentModule);
+  } catch (error) {
+    teacherWorkspacePanel.replaceChildren(teacherText("p","teacher-error",error.message || "Could not load teacher data."));
+  }
+}
+function renderTeacherModule(index) {
+  teacherCurrentModule = index;
+  teacherWorkspacePanel.hidden = false;
+  teacherWorkspacePanel.replaceChildren();
+  if (index === 0) {
+    const active = teacherRecords.filter(item=>item.status!=="archived");
+    const metrics = document.createElement("div"); metrics.className="teacher-metrics";
+    [["Students", "students"],["Classes","classes"],["Courses","courses"],["Exams","exams"],["Homework","homework"]].forEach(([label,type])=>{
+      const count=active.filter(item=>item.type===type).length;
+      const card=teacherText("div","teacher-metric","");
+      card.append(teacherText("small","",label),teacherText("strong","",String(count)));
+      metrics.append(card);
+    });
+    teacherWorkspacePanel.append(metrics,teacherText("h4","teacher-subheading","Quick actions"));
+    const quick=document.createElement("div");quick.className="teacher-quick-actions";
+    [["Add student","students",1],["Create class","classes",1],["Create course","courses",2],["Create exam","exams",3],["Record attendance","attendance",5]].forEach(([label,type,module])=>quick.append(teacherButton(label,"teacher-action",()=>{teacherActiveType=type;renderTeacherModule(module);})));
+    teacherWorkspacePanel.append(quick,teacherText("p","teacher-hint","Your records are private to your teacher account. Changes are saved securely."));
+    return;
+  }
+  const types=teacherSectionTypes[index]||[];
+  const selector=document.createElement("div");selector.className="teacher-type-tabs";
+  types.forEach(type=>{
+    const button=teacherButton(type[0].toUpperCase()+type.slice(1),teacherActiveType===type?"teacher-type active":"teacher-type",()=>{teacherActiveType=type;renderTeacherModule(index);});
+    selector.append(button);
+  });
+  if(!types.includes(teacherActiveType)) teacherActiveType=types[0];
+  teacherWorkspacePanel.append(selector);
+  const currentType=teacherActiveType;
+  const records=teacherRecords.filter(item=>item.type===currentType&&item.status!=="archived");
+  const toolbar=document.createElement("div");toolbar.className="teacher-list-toolbar";
+  const search=document.createElement("input");search.type="search";search.placeholder="Search records";search.setAttribute("aria-label","Search records");
+  const add=teacherButton("+ Add "+(currentType==="students"?"student":currentType.slice(0,-1)),"teacher-action primary",()=>renderTeacherForm(currentType,index));
+  toolbar.append(search,add);teacherWorkspacePanel.append(toolbar);
+  const list=document.createElement("div");list.className="teacher-record-list";
+  const drawList=(query="")=>{
+    list.replaceChildren();
+    const filtered=records.filter(record=>JSON.stringify(record).toLowerCase().includes(query.toLowerCase()));
+    if(!filtered.length){list.append(teacherText("p","teacher-empty",query?"No matching records.":"No records yet. Use the button above to add your first one."));return;}
+    filtered.sort((a,b)=>(b.updatedAt||"").localeCompare(a.updatedAt||""));
+    filtered.forEach(record=>{
+      const card=document.createElement("article");card.className="teacher-record";
+      const name=record.displayName||record.name||record.title||record.prompt||"Untitled record";
+      const meta=[record.subject,record.email,record.date,record.status].filter(Boolean).join(" · ");
+      const info=document.createElement("div");info.append(teacherText("strong","",name),teacherText("small","",meta));
+      const actions=document.createElement("div");actions.className="teacher-record-actions";
+      actions.append(teacherButton("Edit","teacher-small",()=>renderTeacherForm(currentType,index,record)),teacherButton("Archive","teacher-small danger",async()=>{
+        if(!confirm("Archive this record? It will be hidden from the active workspace."))return;
+        try{await call("archiveTeacherResource")({type:currentType,id:record.id});teacherRecords=teacherRecords.filter(item=>item.id!==record.id||item.type!==currentType);renderTeacherModule(index);showMessage("Record archived.","success");}
+        catch(error){showMessage(error.message||"Could not archive this record.");}
+      }));
+      card.append(info,actions);list.append(card);
+    });
+  };
+  search.addEventListener("input",()=>drawList(search.value));drawList();
+  teacherWorkspacePanel.append(list);
+}
+function renderTeacherForm(type,index,record=null) {
+  const fields=teacherFieldDefs[type]||[];
+  teacherWorkspacePanel.replaceChildren();
+  const form=document.createElement("form");form.className="teacher-form";
+  form.append(teacherText("h4","teacher-subheading",record?"Edit record":"Add "+type.slice(0,-1)));
+  const controls={};
+  fields.forEach(([key,label,kind,required])=>{
+    const wrap=document.createElement("label");wrap.className="teacher-field";wrap.append(teacherText("span","",label+(required?" *":"")));
+    let input;
+    if(kind.startsWith("ref:")){
+      input=document.createElement("select");const target=kind.slice(4);input.append(new Option("Select…",""));
+      teacherRecords.filter(item=>item.type===target&&item.status!=="archived").forEach(item=>input.append(new Option(item.displayName||item.name||item.title||item.id,item.id)));
+    } else if(kind.startsWith("select:")){
+      input=document.createElement("select");input.append(new Option("Select…",""));kind.slice(7).split(",").forEach(value=>input.append(new Option(value,value)));
+    } else if(kind==="status"){
+      input=document.createElement("select");[["draft","Draft"],["active","Active"],["published","Published"],["archived","Archived"]].forEach(([v,l])=>input.append(new Option(l,v)));
+    } else if(kind==="textarea"){
+      input=document.createElement("textarea");input.rows=3;
+      if(key==="options") input.placeholder="Choice A\nChoice B\nChoice C\nChoice D";
+    } else if(kind==="checkbox"){
+      input=document.createElement("input");input.type="checkbox";input.checked=record?.[key]===true;
+    } else {input=document.createElement("input");input.type=kind;}
+    input.name=key;input.required=!!required;
+    const old=record?.[key];
+    if(kind==="checkbox") input.checked=old===true;
+    else if(old!==undefined&&old!==null) input.value=key==="options"&&Array.isArray(old)?old.join("\n"):String(old);
+    controls[key]=input;wrap.append(input);form.append(wrap);
+  });
+  const actions=document.createElement("div");actions.className="teacher-form-actions";
+  const save=teacherButton(record?"Save changes":"Save record","teacher-action primary",()=>{});
+  save.type="submit";
+  const cancel=teacherButton("Cancel","teacher-small",()=>renderTeacherModule(index));
+  actions.append(save,cancel);form.append(actions);
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();save.disabled=true;
+    const values={};
+    Object.entries(controls).forEach(([key,input])=>{
+      if(input.type==="checkbox") values[key]=input.checked;
+      else if(input.tagName==="TEXTAREA"&&key==="options") values[key]=input.value.split("\n").map(v=>v.trim()).filter(Boolean);
+      else if(input.type==="number") values[key]=input.value===""?null:Number(input.value);
+      else values[key]=input.value.trim();
+    });
+    try{
+      await call("saveTeacherResource")({type,id:record?.id||undefined,fields:values});
+      const response=await call("getTeacherWorkspace")();teacherRecords=response.data.records||[];
+      showMessage("Saved successfully.","success");renderTeacherModule(index);
+    }catch(error){showMessage(error.message||"Could not save this record.");}
+    finally{save.disabled=false;}
+  });
+  teacherWorkspacePanel.append(form);
 }
 async function refreshAccount(user) {
   currentUser = user;
@@ -221,7 +378,7 @@ async function refreshAccount(user) {
     const result = await call("getMyAccountStatus")();
     const data = result.data;
     accountStatus.textContent = statusLabel(data.status) + (data.platformControls?.maintenance ? "\n\n" + (data.platformControls.maintenanceMessage || "The platform is undergoing scheduled maintenance.") : "");
-    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; bugReportForm.hidden = data.role === "developer"; }
+    if (data.status === "active" && data.role) { renderDashboard(data.role); featureRequestForm.hidden = data.role === "developer"; bugReportForm.hidden = data.role === "developer"; if(data.role==="teacher"||data.role==="mainTeacher"||data.role==="superAdmin") await loadTeacherWorkspace(); }
     requestForm.hidden = !["unrequested", "rejected"].includes(data.status);
     if (data.canReviewRequests) {
       teacherPanel.hidden = false;
