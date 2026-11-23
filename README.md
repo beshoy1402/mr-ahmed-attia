@@ -7,7 +7,7 @@ A production-oriented Learning Management System for SAT Reading & Writing, desi
 - Public website: [Open the live site](https://mr-ahmed-attia-99m5mf8og-beshoys-projects-3aeeadba.vercel.app).
 - Git branch: `production-foundation`.
 - Public site: responsive SAT Reading & Writing landing page with English/Arabic language switching, SAT domain overview, practice information, FAQ, and mobile navigation.
-- Backend: Firebase has not yet been connected or verified. Real student authentication, course data, payments, exams, and AI services are not live.
+- Firebase client configuration is now connected to project `mr-ahmed-attia-12345`. A bilingual sign-in page supports email/password login and password-reset requests. Enable Email/Password in Firebase Authentication and authorize the deployed Vercel domain before testing. Firestore/Storage access, approval workflows, role permissions, courses, exams, payments, and AI are not yet live.
 - Vercel: project `mr-ahmed-attia`; deployment verified as `READY` for the public landing page.
 - No custom domain is attached yet.
 
@@ -41,7 +41,9 @@ The current public page is a static HTML file. Do not add secrets to source cont
 - [x] Firebase configuration scaffold and fail-closed Firestore/Storage rules added.
 - [x] Firebase connection checklist, initial data model, and release checklist added.
 - [x] Confirm and pin the dedicated Firebase project ID (`mr-ahmed-attia-12345`) in Firebase CLI and environment scaffolding.
-- [ ] Register the Firebase Web App, add its public config in Vercel, enable required services, and implement/test scoped rules.
+- [x] Add the supplied public Firebase Web App configuration and bilingual email/password sign-in portal.
+- [ ] Enable Email/Password authentication and authorize the Vercel domains in Firebase Console.
+- [ ] Implement and test scoped Firestore/Storage rules and server-managed account approval/role workflows.
 - [ ] Firebase environments and backend.
 - [ ] Authentication and role-scoped permissions.
 - [ ] Courses, enrollments, question bank, and imports.
